@@ -9,20 +9,20 @@
         .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         input, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
         button { background: #4CAF50; color: white; border: none; cursor: pointer; }
-        #result { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 5px; white-space: pre-wrap; }
+        #result { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 5px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>MemBrain</h1>
         <input type="text" id="topic" placeholder="Введите тему (например, физика)">
-        <button onclick="generate('meme')">🎭 Сгенерировать мем</button>
-        <button onclick="generate('cards')">📋 Сгенерировать карточки</button>
+        <button onclick="generateMeme()">🎭 Сгенерировать мем</button>
+        <button onclick="generateCards()">📋 Сгенерировать карточки</button>
         <div id="result">Введите тему и нажмите одну из кнопок</div>
     </div>
 
     <script>
-        function generate(type) {
+        function generateMeme() {
             const topic = document.getElementById('topic').value;
             const result = document.getElementById('result');
             
@@ -31,39 +31,29 @@
                 return; 
             }
             
-            result.innerHTML = '⏳ Генерируем...';
+            result.innerHTML = '⏳ Генерируем мем...';
             
-            // Прямой вызов OpenAI API (временно для тестирования)
-            fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Bearer sk-proj-NZHtWXKoSc7r7aROKathHS3',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [{
-                        role: 'user', 
-                        content: type === 'meme' 
-                            ? Сгенерируй идею для мема на тему: ${topic}
-                            : Сгенерируй учебные карточки (вопрос-ответ) на тему: ${topic}
-                    }],
-                    max_tokens: 500
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    result.innerHTML = '❌ Ошибка: ' + data.error.message;
-                } else if (data.choices && data.choices[0] && data.choices[0].message) {
-                    result.innerHTML = data.choices[0].message.content;
-                } else {
-                    result.innerHTML = '❌ Неожиданный ответ от сервера';
-                }
-            })
-            .catch(error => {
-                result.innerHTML = '❌ Ошибка подключения: ' + error.message;
-            });
+            // Простая заглушка для тестирования
+            setTimeout(() => {
+                result.innerHTML = 'Мем на тему "' + topic + '" успешно сгенерирован!';
+            }, 1000);
+        }
+        
+        function generateCards() {
+            const topic = document.getElementById('topic').value;
+            const result = document.getElementById('result');
+            
+            if (!topic) { 
+                result.innerHTML = '⚠ Введите тему!'; 
+                return; 
+            }
+            
+            result.innerHTML = '⏳ Генерируем карточки...';
+            
+            // Простая заглушка для тестирования
+            setTimeout(() => {
+                result.innerHTML = 'Карточки на тему "' + topic + '" успешно сгенерированы!';
+            }, 1000);
         }
     </script>
 </body>
