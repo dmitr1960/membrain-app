@@ -19,7 +19,6 @@
         <h1>MemBrain</h1>
         <input type="text" id="topic" placeholder="Введите тему (например, физика)">
         
-        <!-- Убираем onclick из кнопок -->
         <button id="generateMeme">🎭 Сгенерировать мем</button>
         <button id="generateCards">📋 Сгенерировать карточки</button>
         
@@ -29,7 +28,6 @@
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw969zowMkIA0wPaaopmt13r8vWXS73Km3tu2tazh72QxuHqTwhVtN7eN1978h5ALcUiA/exec';
         
-        // Функция для генерации контента
         function generateContent(type) {
             const topic = document.getElementById('topic').value.trim();
             const result = document.getElementById('result');
@@ -43,7 +41,6 @@
             buttons.forEach(btn => btn.disabled = true);
             result.innerHTML = '<div class="loading">⏳ Генерируем... Это займет 10-20 секунд</div>';
             
-            // Добавляем timestamp чтобы избежать кеширования
             const timestamp = new Date().getTime();
             const url = ${SCRIPT_URL}?text=${encodeURIComponent(topic)}&type=${type}&t=${timestamp};
             
@@ -79,7 +76,6 @@
                 });
         }
 
-        // Добавляем обработчики событий после загрузки страницы
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('generateMeme').addEventListener('click', function() {
                 generateContent('meme');
