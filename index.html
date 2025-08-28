@@ -1,0 +1,28 @@
+const OPENAI_API_KEY = 'sk-proj-...'; // Ваш API-ключ
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index');
+}
+
+function generateContent(text, type) {
+  const prompt = type === 'meme' 
+    ? Сгенерируй идею для мема на тему: ${text}
+    : Сгенерируй учебные карточки (вопрос-ответ) на тему: ${text};
+
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const options = {
+    method: 'post',
+    headers: {
+      'Authorization': Bearer ${OPENAI_API_KEY},
+      'Content-Type': 'application/json'
+    },
+    payload: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 500
+    })
+  };
+
+  const response = UrlFetchApp.fetch(url, options);
+  return JSON.parse(response.getContentText());
+}
