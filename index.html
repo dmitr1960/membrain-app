@@ -43,32 +43,41 @@
         const timestamp = new Date().getTime();
         const url = ${SCRIPT_URL}?text=${encodeURIComponent(topic)}&type=${type}&t=${timestamp};
         
-        // Логируем URL запроса
-        console.log('Отправляем запрос на URL:', url);
+        console.log('1. Отправляем запрос на URL:', url);
         
         fetch(url)
             .then(response => {
-                console.log('Получен ответ, статус:', response.status, response.statusText);
+                console.log('2. Получен ответ, статус:', response.status, response.statusText);
+                console.log('3. Заголовки ответа:', Object.fromEntries([...response.headers]));
+                
                 if (!response.ok) {
                     throw new Error('Ошибка сервера: ' + response.status);
                 }
-                return response.json();
+                return response.text(); // Сначала получаем как текст
             })
-            .then(data => {
-                console.log('Получены данные от сервера:', data);
+            .then(text => {
+                console.log('4. Получен текст ответа:', text);
                 
-                if (data.error) {
-                    console.error('Ошибка от сервера:', data.error);
-                    result.innerHTML = '❌ Ошибка: ' + JSON.stringify(data.error);
-                } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
-                    result.innerHTML = data.choices[0].message.content;
-                } else {
-                    console.error('Неожиданный формат ответа:', data);
-                    result.innerHTML = '❌ Неожиданный формат ответа. Проверьте консоль для деталей.';
+                try {
+                    const data = JSON.parse(text);
+                    console.log('5. Данные после парсинга JSON:', data);
+                    
+                    if (data.error) {
+                        console.error('6. Ошибка от сервера:', data.error);
+                        result.innerHTML = '❌ Ошибка: ' + JSON.stringify(data.error);
+                    } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+                        result.innerHTML = data.choices[0].message.content;
+                    } else {
+                        console.error('7. Неожиданный формат ответа:', data);
+                        result.innerHTML = '❌ Неожиданный формат ответа. Проверьте консоль для деталей.';
+                    }
+                } catch (e) {
+                    console.error('8. Ошибка при парсинге JSON:', e, 'Текст ответа:', text);
+                    result.innerHTML = '❌ Ошибка при обработке ответа от сервера. Проверьте консоль.';
                 }
             })
             .catch(error => {
-                console.error('Произошла ошибка при выполнении запроса:', error);
+                console.error('9. Произошла ошибка при выполнении запроса:', error);
                 result.innerHTML = '❌ Ошибка: ' + error.message;
             })
             .finally(() => {
