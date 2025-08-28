@@ -23,8 +23,7 @@
         <div id="result">Введите тему и нажмите одну из кнопок</div>
     </div>
 
-    <script>
-        <script>
+   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw969zowMkIA0wPaaopmt13r8vWXS73Km3tu2tazh72QxuHqTwhVtN7eN1978h5ALcUiA/exec';
     
     function generate(type) {
@@ -44,34 +43,39 @@
         const timestamp = new Date().getTime();
         const url = ${SCRIPT_URL}?text=${encodeURIComponent(topic)}&type=${type}&t=${timestamp};
         
+        // Логируем URL запроса
+        console.log('Отправляем запрос на URL:', url);
+        
         fetch(url)
             .then(response => {
+                console.log('Получен ответ, статус:', response.status, response.statusText);
                 if (!response.ok) {
                     throw new Error('Ошибка сервера: ' + response.status);
                 }
                 return response.json();
             })
             .then(data => {
-                console.log('Полученные данные:', data); // Для отладки
+                console.log('Получены данные от сервера:', data);
                 
                 if (data.error) {
-                    result.innerHTML = '❌ Ошибка: ' + data.error;
+                    console.error('Ошибка от сервера:', data.error);
+                    result.innerHTML = '❌ Ошибка: ' + JSON.stringify(data.error);
                 } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
                     result.innerHTML = data.choices[0].message.content;
                 } else {
-                    // Если структура ответа неожиданная, покажем весь объект для диагностики
-                    result.innerHTML = '❌ Неожиданный формат ответа. Проверьте консоль для деталей.';
                     console.error('Неожиданный формат ответа:', data);
+                    result.innerHTML = '❌ Неожиданный формат ответа. Проверьте консоль для деталей.';
                 }
             })
             .catch(error => {
+                console.error('Произошла ошибка при выполнении запроса:', error);
                 result.innerHTML = '❌ Ошибка: ' + error.message;
-                console.error('Детали ошибки:', error);
             })
             .finally(() => {
                 buttons.forEach(btn => btn.disabled = false);
             });
     }
 </script>
+        
 </body>
 </html>
