@@ -24,72 +24,58 @@
     </div>
 
     <script>
-        // Упрощенный код без потенциальных проблем с кавычками
-        document.addEventListener('DOMContentLoaded', function() {
-            const OPENAI_KEY = 'sk-proj-NZHtWXKoSc7r7aROKathHS3';
-            const topicInput = document.getElementById('topic');
-            const resultDiv = document.getElementById('result');
-            const memeBtn = document.getElementById('memeBtn');
-            const cardsBtn = document.getElementById('cardsBtn');
+    document.addEventListener('DOMContentLoaded', function() {
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw969zowMkIA0wPaaopmt13r8vWXS73Km3tu2tazh72QxuHqTwhVtN7eN1978h5ALcUiA/exec';
+        const topicInput = document.getElementById('topic');
+        const resultDiv = document.getElementById('result');
+        const memeBtn = document.getElementById('memeBtn');
+        const cardsBtn = document.getElementById('cardsBtn');
+        
+        async function generateContent(type) {
+            const topic = topicInput.value.trim();
             
-            async function generateContent(type) {
-                const topic = topicInput.value.trim();
-                
-                if (!topic) { 
-                    resultDiv.innerHTML = '⚠ Введите тему!'; 
-                    return; 
-                }
-                
-                // Блокируем кнопки
-                memeBtn.disabled = true;
-                cardsBtn.disabled = true;
-                resultDiv.innerHTML = '<div class="loading">⏳ Генерируем... Это займет 10-20 секунд</div>';
-                
-                try {
-                    // Используем простые строки без сложных кавычек
-                    let prompt;
-                    if (type === 'meme') {
-                        prompt = 'Придумай идею для мема на тему: ' + topic;
-                    } else {
-                        prompt = 'Создай 3 учебные карточки на тему: ' + topic;
-                    }
-                    
-                    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': 'Bearer ' + OPENAI_KEY,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            model: 'gpt-3.5-turbo',
-                            messages: [{ role: 'user', content: prompt }],
-                            max_tokens: 500
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.error) {
-                        resultDiv.innerHTML = '❌ Ошибка API: ' + data.error.message;
-                    } else if (data.choices && data.choices[0] && data.choices[0].message) {
-                        resultDiv.innerHTML = data.choices[0].message.content;
-                    } else {
-                        resultDiv.innerHTML = '❌ Непонятный ответ от AI';
-                    }
-                    
-                } catch (error) {
-                    resultDiv.innerHTML = '❌ Ошибка подключения: ' + error.message;
-                } finally {
-                    // Разблокируем кнопки
-                    memeBtn.disabled = false;
-                    cardsBtn.disabled = false;
-                }
+            if (!topic) { 
+                resultDiv.innerHTML = '⚠ Введите тему!'; 
+                return; 
             }
             
-            // Назначаем обработчики
-            memeBtn.addEventListener('click', () => generateContent('meme'));
-            cardsBtn.addEventListener('click', () => generateContent('cards'));
-        });
-    </script>
+            // Блокируем кнопки
+            memeBtn.disabled = true;
+            cardsBtn.disabled = true;
+            resultDiv.innerHTML = '<div class="loading">⏳ Генерируем... Это займет 10-20 секунд</div>';
+            
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: text=${encodeURIComponent(topic)}&type=${type}
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    resultDiv.innerHTML = '❌ Ошибка: ' + data.error;
+                } else if (data.choices && data.choices[0] && data.choices[0].message) {
+                    resultDiv.innerHTML = data.choices[0].message.content;
+                } else {
+                    resultDiv.innerHTML = '❌ Непонятный ответ от сервера';
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = '❌ Ошибка подключения: ' + error.message;
+            } finally {
+                // Разблокируем кнопки
+                memeBtn.disabled = false;
+                cardsBtn.disabled = false;
+            }
+        }
+        
+        // Назначаем обработчики
+        memeBtn.addEventListener('click', () => generateContent('meme'));
+        cardsBtn.addEventListener('click', () => generateContent('cards'));
+    });
+</script>
 </body>
 </html>
