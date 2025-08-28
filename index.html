@@ -22,69 +22,86 @@
         <button onclick="generate('cards')">📋 Сгенерировать карточки</button>
         <div id="result">Введите тему и нажмите одну из кнопок</div>
     </div>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemBrain</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        input, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:disabled { background: #ccc; }
+        #result { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 5px; white-space: pre-wrap; }
+        .loading { color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MemBrain</h1>
+        <input type="text" id="topic" placeholder="Введите тему (например, физика)">
+        
+        <!-- Исправленные кнопки -->
+        <button onclick="generate('meme')">🎭 Сгенерировать мем</button>
+        <button onclick="generate('cards')">📋 Сгенерировать карточки</button>
+        
+        <div id="result">Введите тему и нажмите одну из кнопок</div>
+    </div>
 
-   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw969zowMkIA0wPaaopmt13r8vWXS73Km3tu2tazh72QxuHqTwhVtN7eN1978h5ALcUiA/exec';
-    
-    function generate(type) {
-        const topic = document.getElementById('topic').value.trim();
-        const result = document.getElementById('result');
-        const buttons = document.querySelectorAll('button');
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw969zowMkIA0wPaaopmt13r8vWXS73Km3tu2tazh72QxuHqTwhVtN7eN1978h5ALcUiA/exec';
         
-        if (!topic) { 
-            result.innerHTML = '⚠ Пожалуйста, введите тему!'; 
-            return; 
-        }
-        
-        buttons.forEach(btn => btn.disabled = true);
-        result.innerHTML = '<div class="loading">⏳ Генерируем... Это займет 10-20 секунд</div>';
-        
-        // Добавляем timestamp чтобы избежать кеширования
-        const timestamp = new Date().getTime();
-        const url = ${SCRIPT_URL}?text=${encodeURIComponent(topic)}&type=${type}&t=${timestamp};
-        
-        console.log('1. Отправляем запрос на URL:', url);
-        
-        fetch(url)
-            .then(response => {
-                console.log('2. Получен ответ, статус:', response.status, response.statusText);
-                console.log('3. Заголовки ответа:', Object.fromEntries([...response.headers]));
-                
-                if (!response.ok) {
-                    throw new Error('Ошибка сервера: ' + response.status);
-                }
-                return response.text(); // Сначала получаем как текст
-            })
-            .then(text => {
-                console.log('4. Получен текст ответа:', text);
-                
-                try {
-                    const data = JSON.parse(text);
-                    console.log('5. Данные после парсинга JSON:', data);
+        function generate(type) {
+            const topic = document.getElementById('topic').value.trim();
+            const result = document.getElementById('result');
+            const buttons = document.querySelectorAll('button');
+            
+            if (!topic) { 
+                result.innerHTML = '⚠ Пожалуйста, введите тему!'; 
+                return; 
+            }
+            
+            buttons.forEach(btn => btn.disabled = true);
+            result.innerHTML = '<div class="loading">⏳ Генерируем... Это займет 10-20 секунд</div>';
+            
+            // Добавляем timestamp чтобы избежать кеширования
+            const timestamp = new Date().getTime();
+            const url = ${SCRIPT_URL}?text=${encodeURIComponent(topic)}&type=${type}&t=${timestamp};
+            
+            console.log('Отправляем запрос на URL:', url);
+            
+            fetch(url)
+                .then(response => {
+                    console.log('Получен ответ, статус:', response.status, response.statusText);
+                    if (!response.ok) {
+                        throw new Error('Ошибка сервера: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Получены данные от сервера:', data);
                     
                     if (data.error) {
-                        console.error('6. Ошибка от сервера:', data.error);
+                        console.error('Ошибка от сервера:', data.error);
                         result.innerHTML = '❌ Ошибка: ' + JSON.stringify(data.error);
                     } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
                         result.innerHTML = data.choices[0].message.content;
                     } else {
-                        console.error('7. Неожиданный формат ответа:', data);
+                        console.error('Неожиданный формат ответа:', data);
                         result.innerHTML = '❌ Неожиданный формат ответа. Проверьте консоль для деталей.';
                     }
-                } catch (e) {
-                    console.error('8. Ошибка при парсинге JSON:', e, 'Текст ответа:', text);
-                    result.innerHTML = '❌ Ошибка при обработке ответа от сервера. Проверьте консоль.';
-                }
-            })
-            .catch(error => {
-                console.error('9. Произошла ошибка при выполнении запроса:', error);
-                result.innerHTML = '❌ Ошибка: ' + error.message;
-            })
-            .finally(() => {
-                buttons.forEach(btn => btn.disabled = false);
-            });
-    }
-</script>
-        
+                })
+                .catch(error => {
+                    console.error('Произошла ошибка при выполнении запроса:', error);
+                    result.innerHTML = '❌ Ошибка: ' + error.message;
+                })
+                .finally(() => {
+                    buttons.forEach(btn => btn.disabled = false);
+                });
+        }
+    </script>
 </body>
 </html>
+   
