@@ -1,28 +1,63 @@
-const OPENAI_API_KEY = 'sk-proj-...'; // Ваш API-ключ
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemBrain</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        input, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:disabled { background: #ccc; }
+        #result { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 5px; white-space: pre-wrap; }
+        .loading { color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MemBrain</h1>
+        <input type="text" id="topic" placeholder="Введите тему (например, физика)">
+        <button onclick="generate('meme')">🎭 Сгенерировать мем</button>
+        <button onclick="generate('cards')">📋 Сгенерировать карточки</button>
+        <div id="result">Введите тему и нажмите одну из кнопок</div>
+    </div>
 
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Index');
-}
-
-function generateContent(text, type) {
-  const prompt = type === 'meme' 
-    ? Сгенерируй идею для мема на тему: ${text}
-    : Сгенерируй учебные карточки (вопрос-ответ) на тему: ${text};
-
-  const url = 'https://api.openai.com/v1/chat/completions';
-  const options = {
-    method: 'post',
-    headers: {
-      'Authorization': Bearer ${OPENAI_API_KEY},
-      'Content-Type': 'application/json'
-    },
-    payload: JSON.stringify({
-      model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 500
-    })
-  };
-
-  const response = UrlFetchApp.fetch(url, options);
-  return JSON.parse(response.getContentText());
-}
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw969zowMkIA0wPaaopmt13r8vWXS73Km3tu2tazh72QxuHqTwhVtN7eN1978h5ALcUiA/exec';
+        
+        function generate(type) {
+            const topic = document.getElementById('topic').value.trim();
+            const result = document.getElementById('result');
+            const buttons = document.querySelectorAll('button');
+            
+            if (!topic) { 
+                result.innerHTML = '⚠ Пожалуйста, введите тему!'; 
+                return; 
+            }
+            
+            buttons.forEach(btn => btn.disabled = true);
+            result.innerHTML = '<div class="loading">⏳ Генерируем... Это займет 10-20 секунд</div>';
+            
+            fetch(SCRIPT_URL + '?text=' + encodeURIComponent(topic) + '&type=' + type)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        result.innerHTML = '❌ Ошибка: ' + data.error;
+                    } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+                        result.innerHTML = data.choices[0].message.content;
+                    } else {
+                        result.innerHTML = '❌ Неожиданный ответ от сервера';
+                        console.log(data);
+                    }
+                })
+                .catch(error => {
+                    result.innerHTML = '❌ Ошибка подключения: ' + error.message;
+                })
+                .finally(() => {
+                    buttons.forEach(btn => btn.disabled = false);
+                });
+        }
+    </script>
+</body>
+</html>
