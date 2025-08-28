@@ -24,40 +24,54 @@
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw969zoMWHdADwP3aOpnRi3T8vVKS73Km3tu2t4zM72QxuHqTwPwIwIeNl978h5ALcUiA/exec';
+        <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw969zowMkIA0wPaaopmt13r8vWXS73Km3tu2tazh72QxuHqTwhVtN7eN1978h5ALcUiA/exec';
+    
+    function generate(type) {
+        const topic = document.getElementById('topic').value.trim();
+        const result = document.getElementById('result');
+        const buttons = document.querySelectorAll('button');
         
-        function generate(type) {
-            const topic = document.getElementById('topic').value.trim();
-            const result = document.getElementById('result');
-            const buttons = document.querySelectorAll('button');
-            
-            if (!topic) { 
-                result.innerHTML = '⚠ Пожалуйста, введите тему!'; 
-                return; 
-            }
-            
-            buttons.forEach(btn => btn.disabled = true);
-            result.innerHTML = '<div class="loading">⏳ Генерируем... Это займет 10-20 секунд</div>';
-            
-            fetch(SCRIPT_URL + '?text=' + encodeURIComponent(topic) + '&type=' + type)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        result.innerHTML = '❌ Ошибка: ' + data.error;
-                    } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
-                        result.innerHTML = data.choices[0].message.content;
-                    } else {
-                        result.innerHTML = '❌ Неожиданный ответ от сервера';
-                        console.log(data);
-                    }
-                })
-                .catch(error => {
-                    result.innerHTML = '❌ Ошибка подключения: ' + error.message;
-                })
-                .finally(() => {
-                    buttons.forEach(btn => btn.disabled = false);
-                });
+        if (!topic) { 
+            result.innerHTML = '⚠ Пожалуйста, введите тему!'; 
+            return; 
         }
-    </script>
+        
+        buttons.forEach(btn => btn.disabled = true);
+        result.innerHTML = '<div class="loading">⏳ Генерируем... Это займет 10-20 секунд</div>';
+        
+        // Добавляем timestamp чтобы избежать кеширования
+        const timestamp = new Date().getTime();
+        const url = ${SCRIPT_URL}?text=${encodeURIComponent(topic)}&type=${type}&t=${timestamp};
+        
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Ошибка сервера: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Полученные данные:', data); // Для отладки
+                
+                if (data.error) {
+                    result.innerHTML = '❌ Ошибка: ' + data.error;
+                } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+                    result.innerHTML = data.choices[0].message.content;
+                } else {
+                    // Если структура ответа неожиданная, покажем весь объект для диагностики
+                    result.innerHTML = '❌ Неожиданный формат ответа. Проверьте консоль для деталей.';
+                    console.error('Неожиданный формат ответа:', data);
+                }
+            })
+            .catch(error => {
+                result.innerHTML = '❌ Ошибка: ' + error.message;
+                console.error('Детали ошибки:', error);
+            })
+            .finally(() => {
+                buttons.forEach(btn => btn.disabled = false);
+            });
+    }
+</script>
 </body>
 </html>
