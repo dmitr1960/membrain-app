@@ -1,4 +1,4 @@
-// manual.js - ФИНАЛЬНЫЙ РАБОЧИЙ КОД
+// manual.js - ФИНАЛЬНЫЙ ИСПРАВЛЕННЫЙ КОД
 
 class MemoryCard {
     constructor(question, answer) {
@@ -95,47 +95,70 @@ class MemoryApp {
         alert(`Сгенерировано ${this.cards.length} карточек!`);
     }
 
-    // Находим основную тему текста
+    // Находим основную тему текста - ИСПРАВЛЕННАЯ ВЕРСИЯ
     findMainTopic(text) {
         const lines = text.split('\n').filter(line => line.trim().length > 0);
         
-        // Ищем тему в первой строке (обычно там название)
+        // Ищем тему в первой строке
         if (lines.length > 0) {
             const firstLine = lines[0].trim();
             
-            // Если строка короткая или содержит двоеточие - это скорее всего тема
-            if (firstLine.includes(':') || firstLine.split(' ').length <= 6) {
-                let topic = firstLine.replace(':', '').trim();
-                
-                // Убираем слова "формулировка", "определение" и т.д.
-                topic = topic.replace(/(формулировка|определение|понятие|теория)\s+/gi, '');
-                return topic || 'основное понятие';
+            // Убираем служебные слова: формулировка, определение и т.д.
+            let cleanLine = firstLine
+                .replace(/(формулировка|определение|понятие|теория|закон|принцип|правило)\s+/gi, '')
+                .replace(':', '')
+                .trim();
+            
+            // Если после очистки остался осмысленный текст
+            if (cleanLine.split(' ').length <= 6 && cleanLine.length > 3) {
+                return cleanLine;
             }
         }
         
-        // Ищем в первом предложении слова с большой буквы
+        // Ищем в первом предложении
         const firstSentence = text.split(/[.!?]+/)[0];
-        const words = firstSentence.trim().split(' ');
+        let cleanSentence = firstSentence
+            .replace(/(формулировка|определение|понятие|теория)\s+/gi, '')
+            .trim();
         
-        // Ищем слова с большой буквы (кроме первого)
-        for (let i = 1; i < words.length; i++) {
+        const words = cleanSentence.split(' ');
+        
+        // Ищем слова с большой буквы (кроме первого, если это служебное)
+        for (let i = 0; i < words.length; i++) {
             const word = words[i].replace(/[^a-яё]/gi, '');
             if (word.length > 4 && words[i][0] === words[i][0].toUpperCase()) {
-                return word;
+                // Проверяем, не служебное ли это слово
+                if (!this.isServiceWord(word.toLowerCase())) {
+                    return word;
+                }
             }
         }
         
-        // Или берем первые два значимых слова
+        // Ищем самые длинные значимые слова
         const meaningfulWords = words.filter(word => {
             const clean = word.replace(/[^a-яё]/gi, '');
-            return clean.length > 3;
+            return clean.length > 4 && !this.isServiceWord(clean.toLowerCase());
         });
         
         if (meaningfulWords.length >= 2) {
             return meaningfulWords.slice(0, 2).join(' ');
         }
         
+        if (meaningfulWords.length === 1) {
+            return meaningfulWords[0];
+        }
+        
         return 'основное понятие';
+    }
+
+    // Проверка служебных слов
+    isServiceWord(word) {
+        const serviceWords = [
+            'формулировка', 'определение', 'понятие', 'теория', 'закон',
+            'принцип', 'правило', 'теорема', 'аксиома', 'лемма', 
+            'свойство', 'признак', 'явление', 'процесс', 'явление'
+        ];
+        return serviceWords.includes(word);
     }
 
     // Создаем осмысленные вопросы в контексте темы
