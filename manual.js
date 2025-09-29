@@ -1,4 +1,4 @@
-// manual.js - ИСПРАВЛЕННАЯ ГЕНЕРАЦИЯ ВОПРОСОВ
+// manual.js - ИСПРАВЛЕННЫЙ РАБОЧИЙ КОД
 
 class MemoryCard {
     constructor(question, answer) {
@@ -15,27 +15,69 @@ class MemoryApp {
         this.cards = this.loadCards();
         this.currentCardIndex = 0;
         this.isAnswerShown = false;
-        this.init();
     }
 
     init() {
+        console.log('MemBrain инициализирован');
         this.bindEvents();
         this.showMainInterface();
     }
 
     bindEvents() {
-        document.getElementById('generateBtn').addEventListener('click', () => this.generateCards());
-        document.getElementById('startReviewBtn').addEventListener('click', () => this.startReview());
-        document.getElementById('showAnswerBtn').addEventListener('click', () => this.showAnswer());
-        document.getElementById('hardBtn').addEventListener('click', () => this.rateCard(2));
-        document.getElementById('goodBtn').addEventListener('click', () => this.rateCard(3));
-        document.getElementById('easyBtn').addEventListener('click', () => this.rateCard(4));
+        console.log('Привязка событий...');
+        
+        // Проверяем существование элементов перед привязкой
+        const elements = {
+            generateBtn: document.getElementById('generateBtn'),
+            startReviewBtn: document.getElementById('startReviewBtn'),
+            showAnswerBtn: document.getElementById('showAnswerBtn'),
+            hardBtn: document.getElementById('hardBtn'),
+            goodBtn: document.getElementById('goodBtn'),
+            easyBtn: document.getElementById('easyBtn')
+        };
+        
+        console.log('Найденные элементы:', elements);
+        
+        // Привязываем события только если элементы существуют
+        if (elements.generateBtn) {
+            elements.generateBtn.addEventListener('click', () => this.generateCards());
+            console.log('Кнопка generateBtn привязана');
+        } else {
+            console.error('Кнопка generateBtn не найдена!');
+        }
+        
+        if (elements.startReviewBtn) {
+            elements.startReviewBtn.addEventListener('click', () => this.startReview());
+        }
+        
+        if (elements.showAnswerBtn) {
+            elements.showAnswerBtn.addEventListener('click', () => this.showAnswer());
+        }
+        
+        if (elements.hardBtn) {
+            elements.hardBtn.addEventListener('click', () => this.rateCard(2));
+        }
+        
+        if (elements.goodBtn) {
+            elements.goodBtn.addEventListener('click', () => this.rateCard(3));
+        }
+        
+        if (elements.easyBtn) {
+            elements.easyBtn.addEventListener('click', () => this.rateCard(4));
+        }
     }
 
-    // ИСПРАВЛЕННАЯ ГЕНЕРАЦИЯ КАРТОЧЕК
     generateCards() {
+        console.log('Генерация карточек...');
+        
         const textInput = document.getElementById('textInput');
+        if (!textInput) {
+            alert('Поле ввода не найдено!');
+            return;
+        }
+        
         const text = textInput.value.trim();
+        console.log('Введенный текст:', text);
         
         if (!text) {
             alert('Введите текст для генерации карточек');
@@ -46,6 +88,7 @@ class MemoryApp {
         
         // Разбиваем текст на предложения
         const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+        console.log('Найдено предложений:', sentences.length);
         
         if (sentences.length === 0) {
             alert('Не удалось извлечь предложения из текста');
@@ -70,13 +113,12 @@ class MemoryApp {
         alert(`Сгенерировано ${this.cards.length} карточек!`);
     }
 
-    // ИСПРАВЛЕННАЯ ГЕНЕРАЦИЯ ВОПРОСОВ - БЕЗ ДУБЛИРОВАНИЯ
     generateQuestion(sentence) {
         let cleanSentence = sentence.trim();
         
         // Убираем "Что такое" если уже есть в предложении
         if (cleanSentence.toLowerCase().startsWith('что такое')) {
-            cleanSentence = cleanSentence.substring(9).trim(); // Убираем "Что такое"
+            cleanSentence = cleanSentence.substring(9).trim();
         }
         
         // Находим термин для вопроса
@@ -84,28 +126,28 @@ class MemoryApp {
         const words = cleanSentence.split(' ').filter(word => word.length > 0);
         
         if (words.length <= 3) {
-            // Короткое предложение - используем целиком
             term = cleanSentence;
         } else if (cleanSentence.includes(' это ') || cleanSentence.includes(' - ') || cleanSentence.includes(' – ')) {
-            // Для определений берем часть до "это" или "-"
             const parts = cleanSentence.split(/ это | - | – /);
             term = parts[0].trim();
         } else {
-            // Для обычных предложений берем первые 2-3 слова
             term = words.slice(0, Math.min(3, words.length)).join(' ');
         }
         
         // Убираем знаки препинания в конце
         term = term.replace(/[.,!?;:]$/, '');
         
-        // Создаем вопрос
         return `Что такое ${term}?`;
     }
 
-    // ОСТАЛЬНЫЕ МЕТОДЫ БЕЗ ИЗМЕНЕНИЙ
     displayGeneratedCards() {
         const cardsList = document.getElementById('cardsList');
         const cardsContainer = document.getElementById('cardsContainer');
+        
+        if (!cardsList || !cardsContainer) {
+            console.error('Элементы cardsList или cardsContainer не найдены!');
+            return;
+        }
         
         cardsList.innerHTML = '';
         
@@ -196,8 +238,11 @@ class MemoryApp {
     }
 
     updateProgress() {
-        const progress = (this.currentCardIndex / this.cards.length) * 100;
-        document.getElementById('progressFill').style.width = progress + '%';
+        const progressFill = document.getElementById('progressFill');
+        if (progressFill) {
+            const progress = (this.currentCardIndex / this.cards.length) * 100;
+            progressFill.style.width = progress + '%';
+        }
     }
 
     saveCards() {
@@ -210,7 +255,9 @@ class MemoryApp {
     }
 }
 
-// Запуск приложения
+// Запуск приложения после полной загрузки DOM
 document.addEventListener('DOMContentLoaded', () => {
-    new MemoryApp();
+    console.log('DOM полностью загружен, запуск приложения...');
+    const app = new MemoryApp();
+    app.init();
 });
