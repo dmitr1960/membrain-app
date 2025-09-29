@@ -1,4 +1,4 @@
-// manual.js - ФИНАЛЬНЫЙ ИСПРАВЛЕННЫЙ КОД
+// manual.js - УНИВЕРСАЛЬНЫЙ РАБОЧИЙ КОД
 
 class MemoryCard {
     constructor(question, answer) {
@@ -69,230 +69,116 @@ class MemoryApp {
         
         this.cards = [];
         
-        // ПРЕОБРАЗОВАНИЕ ТЕКСТА В СТРУКТУРИРОВАННЫЕ БЛОКИ
-        const blocks = this.parseStructuredText(text);
+        // УНИВЕРСАЛЬНЫЙ ПАРСИНГ ЛЮБОГО ТЕКСТА
+        const cards = this.parseUniversalText(text);
         
-        if (blocks.length === 0) {
-            alert('Не удалось извлечь информацию из текста.');
+        if (cards.length === 0) {
+            alert('Не удалось извлечь информацию из текста. Попробуйте более структурированный текст.');
             return;
         }
         
-        // СОЗДАЕМ КАЧЕСТВЕННЫЕ КАРТОЧКИ
-        blocks.forEach(block => {
-            if (block.term && block.definition) {
-                const question = this.createQualityQuestion(block.term);
-                const answer = block.definition;
-                this.cards.push(new MemoryCard(question, answer));
-            }
-        });
-        
+        this.cards = cards;
         this.saveCards();
         this.displayGeneratedCards();
         alert(`Сгенерировано ${this.cards.length} карточек!`);
     }
 
-    // СОЗДАНИЕ КАЧЕСТВЕННОГО ВОПРОСА
-    createQualityQuestion(term) {
-        // Убираем "Что такое" если уже есть в термине
-        let cleanTerm = term.replace(/^Что такое\s+/i, '').trim();
+    // УНИВЕРСАЛЬНЫЙ ПАРСИНГ ТЕКСТА
+    parseUniversalText(text) {
+        const cards = [];
         
-        // Добавляем разные варианты вопросов для разнообразия
-        const questionTypes = [
-            `Что такое ${cleanTerm}?`,
-            `Дайте определение ${cleanTerm}`,
-            `Объясните понятие "${cleanTerm}"`,
-            `Что означает термин "${cleanTerm}"?`,
-            `Опишите ${cleanTerm}`
-        ];
+        // Очищаем текст от мусора
+        const cleanText = text
+            .replace(/Содержимое ответа\s*/gi, '')
+            .replace(/Ответ:\s*/gi, '')
+            .replace(/\n+/g, '. ')
+            .replace(/\s+/g, ' ')
+            .trim();
         
-        // Выбираем случайный тип вопроса (но первый чаще)
-        const random = Math.random();
-        if (random < 0.6) {
-            return questionTypes[0]; // "Что такое..." - чаще
-        } else {
-            return questionTypes[Math.floor(Math.random() * (questionTypes.length - 1)) + 1];
-        }
-    }
-
-    // ПАРСИНГ СТРУКТУРИРОВАННОГО ТЕКСТА
-    parseStructuredText(text) {
-        const blocks = [];
-        const lines = text.split('\n').filter(line => line.trim().length > 0);
-        
-        let currentTerm = '';
-        let currentDefinition = '';
-        
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            
-            // Пропускаем пустые строки и служебные фразы
-            if (!line || line.startsWith('Содержимое ответа') || line === 'Ответ:') {
-                continue;
-            }
-            
-            // Обрабатываем строки с определениями
-            if (line.includes(' - это ') || line.includes(' — это ') || 
-                line.includes(' это ') || line.match(/[а-яё]\s*[-—]\s*[а-яё]/i)) {
-                
-                // Сохраняем предыдущую карточку если есть
-                if (currentTerm && currentDefinition) {
-                    blocks.push({
-                        term: currentTerm,
-                        definition: currentDefinition
-                    });
-                    currentTerm = '';
-                    currentDefinition = '';
-                }
-                
-                // Разбираем новую строку с определением
-                const parsed = this.parseDefinitionLine(line);
-                if (parsed.term && parsed.definition) {
-                    currentTerm = parsed.term;
-                    currentDefinition = parsed.definition;
-                }
-            }
-            // Обрабатываем нумерованные пункты
-            else if (line.match(/^\d+[\.\)]\s/)) {
-                if (currentTerm && currentDefinition) {
-                    blocks.push({
-                        term: currentTerm,
-                        definition: currentDefinition
-                    });
-                    currentTerm = '';
-                    currentDefinition = '';
-                }
-                
-                const parsed = this.parseNumberedLine(line);
-                if (parsed.term && parsed.definition) {
-                    currentTerm = parsed.term;
-                    currentDefinition = parsed.definition;
-                }
-            }
-            // Обрабатываем примеры и дополнительные пояснения
-            else if (line.startsWith('Например,') || line.startsWith('Если') || 
-                     line.startsWith('С её') || line.startsWith('Она')) {
-                // Добавляем к текущему определению как продолжение
-                if (currentDefinition) {
-                    currentDefinition += ' ' + line;
-                } else if (currentTerm) {
-                    // Если есть термин но нет определения, создаем определение
-                    currentDefinition = line;
-                }
-            }
-            // Обычный текст - пробуем извлечь термин и определение
-            else if (line.length > 15) {
-                if (currentTerm && currentDefinition) {
-                    blocks.push({
-                        term: currentTerm,
-                        definition: currentDefinition
-                    });
-                    currentTerm = '';
-                    currentDefinition = '';
-                }
-                
-                const parsed = this.extractFromPlainText(line);
-                if (parsed.term && parsed.definition) {
-                    currentTerm = parsed.term;
-                    currentDefinition = parsed.definition;
-                } else {
-                    // Если не нашли структуру, используем как есть
-                    currentTerm = this.extractMainTerm(line);
-                    currentDefinition = line;
-                }
-            }
-        }
-        
-        // Добавляем последнюю карточку
-        if (currentTerm && currentDefinition) {
-            blocks.push({
-                term: currentTerm,
-                definition: currentDefinition
-            });
-        }
-        
-        return blocks;
-    }
-
-    // РАЗБОР СТРОКИ С ОПРЕДЕЛЕНИЕМ
-    parseDefinitionLine(line) {
-        let term = '';
-        let definition = '';
-        
-        // Паттерн: "Термин - это определение"
-        const pattern1 = line.match(/^(.+?)\s*[-—]\s*это\s*(.+)$/i);
-        if (pattern1) {
-            term = this.cleanTerm(pattern1[1]);
-            definition = pattern1[2].trim();
-            return { term, definition };
-        }
-        
-        // Паттерн: "Термин это определение"
-        const pattern2 = line.match(/^(.+?)\s+это\s+(.+)$/i);
-        if (pattern2) {
-            term = this.cleanTerm(pattern2[1]);
-            definition = pattern2[2].trim();
-            return { term, definition };
-        }
-        
-        // Паттерн: "Термин - определение" (без "это")
-        const pattern3 = line.match(/^(.+?)\s*[-—]\s*(.+)$/);
-        if (pattern3) {
-            term = this.cleanTerm(pattern3[1]);
-            definition = pattern3[2].trim();
-            return { term, definition };
-        }
-        
-        return { term: '', definition: '' };
-    }
-
-    // РАЗБОР НУМЕРОВАННОЙ СТРОКИ
-    parseNumberedLine(line) {
-        // Убираем номер и точку
-        const withoutNumber = line.replace(/^\d+[\.\)]\s*/, '').trim();
-        
-        // Пробуем найти термин и определение
-        if (withoutNumber.includes(' - ') || withoutNumber.includes(' — ') || 
-            withoutNumber.includes(' это ')) {
-            return this.parseDefinitionLine(withoutNumber);
-        }
-        
-        // Если структуры нет, берем первые слова как термин
-        const words = withoutNumber.split(' ');
-        if (words.length > 3) {
-            const term = words.slice(0, 2).join(' ');
-            const definition = withoutNumber;
-            return { term: this.cleanTerm(term), definition };
-        }
-        
-        return { term: this.cleanTerm(withoutNumber), definition: withoutNumber };
-    }
-
-    // ИЗВЛЕЧЕНИЕ ИЗ ОБЫЧНОГО ТЕКСТА
-    extractFromPlainText(text) {
-        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
-        
-        for (let sentence of sentences) {
-            const parsed = this.parseDefinitionLine(sentence.trim());
-            if (parsed.term && parsed.definition) {
-                return parsed;
-            }
-        }
-        
-        return { term: '', definition: '' };
-    }
-
-    // ИЗВЛЕЧЕНИЕ ОСНОВНОГО ТЕРМИНА
-    extractMainTerm(text) {
-        const words = text.split(' ').filter(word => {
-            const clean = word.replace(/[^a-яё]/gi, '');
-            return clean.length > 3 && !this.isStopWord(clean.toLowerCase());
+        // Разбиваем на предложения
+        const sentences = cleanText.split(/[.!?]+/).filter(s => {
+            const clean = s.trim();
+            return clean.length > 10 && clean.split(' ').length > 3;
         });
         
-        if (words.length >= 2) {
-            return words.slice(0, 2).join(' ');
+        if (sentences.length === 0) {
+            // Если не нашли предложений, создаем одну карточку из всего текста
+            const mainTerm = this.extractMainTerm(cleanText);
+            if (mainTerm && cleanText.length > 20) {
+                cards.push(new MemoryCard(
+                    `Что такое ${mainTerm}?`,
+                    cleanText
+                ));
+            }
+            return cards;
         }
         
-        return words[0] || 'основное понятие';
+        // Создаем карточки из предложений
+        sentences.forEach(sentence => {
+            const cleanSentence = sentence.trim();
+            if (cleanSentence.length > 0) {
+                const mainTerm = this.extractMainTerm(cleanSentence);
+                if (mainTerm) {
+                    cards.push(new MemoryCard(
+                        `Что такое ${mainTerm}?`,
+                        cleanSentence
+                    ));
+                }
+            }
+        });
+        
+        return cards;
+    }
+
+    // ИЗВЛЕЧЕНИЕ ГЛАВНОГО ТЕРМИНА ИЗ ТЕКСТА
+    extractMainTerm(text) {
+        // Убираем "Что такое" если уже есть
+        let cleanText = text.replace(/^Что такое\s+/i, '').trim();
+        
+        // Ищем термин в начале предложения (первые 2-4 слова)
+        const words = cleanText.split(' ').filter(word => {
+            const cleanWord = word.replace(/[^a-яё]/gi, '');
+            return cleanWord.length > 2 && !this.isStopWord(cleanWord.toLowerCase());
+        });
+        
+        if (words.length === 0) return null;
+        
+        // Пробуем разные комбинации
+        const candidates = [];
+        
+        // Комбинация из 1 слова (если длинное)
+        if (words[0].length >= 4) {
+            candidates.push(words[0]);
+        }
+        
+        // Комбинация из 2 слов
+        if (words.length >= 2) {
+            candidates.push(words.slice(0, 2).join(' '));
+        }
+        
+        // Комбинация из 3 слов
+        if (words.length >= 3) {
+            candidates.push(words.slice(0, 3).join(' '));
+        }
+        
+        // Выбираем самую подходящую комбинацию
+        for (let candidate of candidates) {
+            const cleanCandidate = this.cleanTerm(candidate);
+            if (cleanCandidate.length >= 3 && cleanCandidate.length <= 35) {
+                return cleanCandidate;
+            }
+        }
+        
+        return this.cleanTerm(words[0]);
+    }
+
+    // ОЧИСТКА ТЕРМИНА
+    cleanTerm(term) {
+        return term
+            .replace(/^[^a-яё]*|[^a-яё]*$/gi, '')
+            .replace(/[.,:;!?]$/, '')
+            .replace(/\s+/g, ' ')
+            .trim();
     }
 
     // СПИСОК СТОП-СЛОВ
@@ -302,17 +188,9 @@ class MemoryApp {
             'о', 'за', 'до', 'не', 'но', 'или', 'и', 'да', 'нет', 'если', 'то',
             'так', 'же', 'бы', 'вот', 'там', 'тут', 'здесь', 'там', 'где', 'когда',
             'потому', 'поэтому', 'чтобы', 'который', 'какой', 'чей', 'сколько',
-            'она', 'они', 'его', 'её', 'их', 'ему', 'ей', 'им'
+            'она', 'они', 'его', 'её', 'их', 'ему', 'ей', 'им', 'теорема'
         ];
         return stopWords.includes(word);
-    }
-
-    // ОЧИСТКА ТЕРМИНА
-    cleanTerm(term) {
-        return term
-            .replace(/^[^a-яё]*|[^a-яё]*$/gi, '')
-            .replace(/\s+/g, ' ')
-            .trim();
     }
 
     displayGeneratedCards() {
