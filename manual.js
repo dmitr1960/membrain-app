@@ -1,174 +1,77 @@
-// Новая интеллектуальная генерация карточек
+// Простая и надежная генерация карточек
 function generateFlashcards(text) {
     if (!text || text.trim().length < 10) {
         return [new SmartFlashcard(
-            "Текст слишком короткий", 
-            "Добавьте больше информации для генерации карточек"
+            "Введите текст для изучения", 
+            "Добавьте текст длиной от 10 символов для генерации карточек"
         )];
     }
     
-    // Очищаем текст от готовых вопросов
-    const cleanedText = text
-        .replace(/Что такое [^?]+\?/g, '') // Удаляем "Что такое...?"
-        .replace(/\d+\.\s*/g, '') // Удаляем нумерацию
-        .replace(/Содержимое ответа/g, '') // Удаляем мусор
-        .replace(/\n/g, '. ') // Заменяем переносы на точки
-        .replace(/\s+/g, ' ') // Убираем лишние пробелы
-        .trim();
+    console.log("Начало генерации карточек");
     
-    // Разбиваем на предложения
-    const sentences = cleanedText.split(/[.!?]+/).filter(s => {
+    // Простое разбиение на предложения
+    const sentences = text.split(/[.!?]+/).filter(s => {
         const trimmed = s.trim();
-        return trimmed.length > 15 && 
-               trimmed.split(' ').length >= 4 &&
-               !trimmed.match(/^\d/); // Исключаем начинающиеся с цифр
+        return trimmed.length > 10 && trimmed.split(' ').length >= 3;
     });
+    
+    console.log("Найдено предложений:", sentences.length);
     
     const flashcards = [];
     
-    sentences.forEach((sentence) => {
-        const trimmed = sentence.trim();
-        if (!trimmed) return;
+    // Проходим по каждому предложению
+    for (let i = 0; i < sentences.length && flashcards.length < 8; i++) {
+        const sentence = sentences[i].trim();
+        if (!sentence) continue;
         
-        // Создаем разные типы вопросов в зависимости от содержания
-        const questionAnswer = createQuestionAnswer(trimmed);
-        if (questionAnswer) {
-            flashcards.push(new SmartFlashcard(
-                questionAnswer.question,
-                questionAnswer.answer
-            ));
+        // Создаем карточку для каждого предложения
+        const card = createCardFromSentence(sentence);
+        if (card) {
+            flashcards.push(card);
         }
-    });
-    
-    // Если карточек мало, создаем обобщающие
-    if (flashcards.length < 2) {
-        return createFallbackCards(cleanedText);
     }
     
-    return flashcards.slice(0, 8);
+    console.log("Сгенерировано карточек:", flashcards.length);
+    
+    // Если ничего не сгенерировалось, создаем хотя бы одну карточку
+    if (flashcards.length === 0) {
+        flashcards.push(new SmartFlashcard(
+            "Основная идея текста",
+            text.substring(0, 100) + (text.length > 100 ? '...' : '')
+        ));
+    }
+    
+    return flashcards;
 }
 
-// Создание пары вопрос-ответ на основе предложения
-function createQuestionAnswer(sentence) {
-    const lowerSentence = sentence.toLowerCase();
-    
-    // Определения (содержит "это", "означает", "называется")
-    if (lowerSentence.includes(' это ') || 
-        lowerSentence.includes(' означает ') || 
-        lowerSentence.includes(' называется ') ||
-        lowerSentence.match(/^[^ ]+ — это /) ||
-        lowerSentence.match(/^[^ ]+ это /)) {
-        
-        // Извлекаем понятие до "это"
-        const match = sentence.match(/^([^—]+) — это (.+)/) || 
-                     sentence.match(/^([^ ]+) это (.+)/) ||
-                     sentence.match(/([^.!?]+) это ([^.!?]+)/);
-        
-        if (match) {
-            const concept = match[1].trim();
-            const definition = match[2].trim();
-            return {
-                question: `${concept} - это...?`,
-                answer: definition
-            };
-        }
-        
-        // Альтернативный вариант
-        const concept = extractMainConcept(sentence.split(' это ')[0]);
-        return {
-            question: `Дайте определение: ${concept}`,
-            answer: sentence
-        };
-    }
-    
-    // Процессы и характеристики (содержит "включает", "состоит", "имеет")
-    if (lowerSentence.includes('включает') || 
-        lowerSentence.includes('состоит') || 
-        lowerSentence.includes('имеет') ||
-        lowerSentence.includes('характеризуется')) {
-        
-        const concept = extractMainConcept(sentence);
-        return {
-            question: `Какие характеристики имеет ${concept}?`,
-            answer: sentence
-        };
-    }
-    
-    // Примеры (содержит "например", "пример", "как")
-    if (lowerSentence.includes('например') || 
-        lowerSentence.includes('пример') ||
-        lowerSentence.includes('как ')) {
-        
-        const concept = extractMainConcept(sentence);
-        return {
-            question: `Приведите пример: ${concept}`,
-            answer: sentence
-        };
-    }
-    
-    // Математические понятия
-    if (lowerSentence.includes('вероятность') || 
-        lowerSentence.includes('число') || 
-        lowerSentence.includes('равна') ||
-        lowerSentence.includes('формула')) {
-        
-        const concept = extractMainConcept(sentence);
-        return {
-            question: `Как вычисляется ${concept}?`,
-            answer: sentence
-        };
-    }
-    
-    // По умолчанию - создаем вопрос на понимание
-    const concept = extractMainConcept(sentence);
-    if (concept && concept.length > 5) {
-        return {
-            question: `Объясните: ${concept}`,
-            answer: sentence
-        };
-    }
-    
-    return null;
-}
-
-// Извлечение основного понятия (упрощенная версия)
-function extractMainConcept(text) {
-    // Удаляем мусор
-    let cleaned = text
-        .replace(/^[^а-яА-Я]*/, '') // Удаляем начальные не-буквы
-        .replace(/[.,;:!?]$/, '')
+// Создание одной карточки из предложения
+function createCardFromSentence(sentence) {
+    // Очищаем предложение от мусора
+    let cleaned = sentence
+        .replace(/^\d+\.?\s*/, '') // Удаляем "1. ", "2. "
+        .replace(/^[-•]\s*/, '')   // Удаляем маркеры списка
+        .replace(/Содержимое ответа/g, '') // Удаляем мусор
         .trim();
     
-    // Берем первые 2-3 значимых слова
-    const words = cleaned.split(/\s+/)
-        .filter(word => word.length > 3)
-        .slice(0, 3);
+    // Если предложение слишком короткое после очистки, пропускаем
+    if (cleaned.length < 15 || cleaned.split(' ').length < 3) {
+        return null;
+    }
     
-    return words.join(' ') || 'данное понятие';
-}
-
-// Резервная генерация
-function createFallbackCards(text) {
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
-    const flashcards = [];
+    // Извлекаем основное понятие (первые 2-3 значимых слова)
+    const words = cleaned.split(' ').filter(word => 
+        word.length > 2 && 
+        !['это', 'также', 'которые', 'который', 'например'].includes(word.toLowerCase())
+    );
     
-    sentences.forEach(sentence => {
-        const trimmed = sentence.trim();
-        const words = trimmed.split(' ').filter(word => word.length > 3);
-        
-        if (words.length >= 3) {
-            const concept = words.slice(0, 2).join(' ');
-            flashcards.push(new SmartFlashcard(
-                `Объясните: ${concept}`,
-                trimmed
-            ));
-        }
-    });
+    if (words.length < 2) {
+        return null;
+    }
     
-    return flashcards.length > 0 ? flashcards : [
-        new SmartFlashcard(
-            "Основная тема текста",
-            text.substring(0, 150) + (text.length > 150 ? '...' : '')
-        )
-    ];
+    const mainConcept = words.slice(0, 2).join(' ');
+    
+    // Создаем вопрос БЕЗ "Что такое"
+    const question = `Объясните: ${mainConcept}`;
+    
+    return new SmartFlashcard(question, cleaned);
 }
