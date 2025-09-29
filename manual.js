@@ -1,4 +1,4 @@
-// manual.js - ПРОСТОЙ И РАБОЧИЙ КОД
+// manual.js - ПРОСТЕЙШИЙ РАБОЧИЙ КОД
 
 class MemoryCard {
     constructor(question, answer) {
@@ -69,92 +69,57 @@ class MemoryApp {
         
         this.cards = [];
         
-        // ПРОСТОЙ ПАРСИНГ - РАЗБИВАЕМ НА ПРЕДЛОЖЕНИЯ И СОЗДАЕМ ЛОГИЧНЫЕ ВОПРОСЫ
-        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+        // ПРОСТЕЙШАЯ ЛОГИКА: Ищем название темы в первой строке
+        const lines = text.split('\n').filter(line => line.trim().length > 0);
+        
+        let mainTopic = '';
+        
+        // Ищем тему в первой строке (содержит двоеточие или это короткая строка)
+        if (lines.length > 0) {
+            const firstLine = lines[0].trim();
+            if (firstLine.includes(':') || firstLine.split(' ').length <= 5) {
+                mainTopic = firstLine.replace(':', '').trim();
+            } else {
+                // Или берем первые 2-3 слова из первого предложения
+                const words = firstLine.split(' ').slice(0, 3);
+                mainTopic = words.join(' ');
+            }
+        }
+        
+        if (!mainTopic) {
+            mainTopic = 'основное понятие';
+        }
+        
+        // Разбиваем на предложения для создания карточек
+        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 15);
         
         if (sentences.length === 0) {
-            alert('Не удалось извлечь предложения из текста');
-            return;
-        }
-        
-        // ДЛЯ ПЕРВОГО ПРЕДЛОЖЕНИЯ - ВОПРОС О ГЛАВНОМ ПОНЯТИИ
-        if (sentences.length >= 1) {
-            const firstSentence = sentences[0].trim();
-            const mainConcept = this.findMainConcept(firstSentence);
+            // Если не нашли предложений, создаем одну карточку
             this.cards.push(new MemoryCard(
-                `Что такое ${mainConcept}?`,
-                firstSentence
+                `Что такое ${mainTopic}?`,
+                text
             ));
-        }
-        
-        // ДЛЯ ОСТАЛЬНЫХ ПРЕДЛОЖЕНИЙ - ВОПРОСЫ О ДЕТАЛЯХ
-        for (let i = 1; i < sentences.length; i++) {
-            const sentence = sentences[i].trim();
-            if (sentence.length > 0) {
-                const question = this.createDetailQuestion(sentence, i);
-                this.cards.push(new MemoryCard(question, sentence));
-            }
+        } else {
+            // Создаем карточки для каждого предложения
+            sentences.forEach((sentence, index) => {
+                const cleanSentence = sentence.trim();
+                let question;
+                
+                if (index === 0) {
+                    // Первая карточка - основной вопрос
+                    question = `Что такое ${mainTopic}?`;
+                } else {
+                    // Остальные карточки - дополнительные вопросы
+                    question = `Дополнительная информация о ${mainTopic}`;
+                }
+                
+                this.cards.push(new MemoryCard(question, cleanSentence));
+            });
         }
         
         this.saveCards();
         this.displayGeneratedCards();
         alert(`Сгенерировано ${this.cards.length} карточек!`);
-    }
-
-    // НАХОДИМ ГЛАВНОЕ ПОНЯТИЕ В ПЕРВОМ ПРЕДЛОЖЕНИИ
-    findMainConcept(sentence) {
-        // Ищем слова с большой буквы в начале предложения
-        const words = sentence.split(' ');
-        
-        // Вариант 1: Первые 2-3 слова если они с большой буквы
-        if (words.length >= 2 && words[0][0] === words[0][0].toUpperCase()) {
-            if (words[1][0] === words[1][0].toUpperCase()) {
-                return words.slice(0, 2).join(' ');
-            }
-            return words[0];
-        }
-        
-        // Вариант 2: Ищем самое длинное слово
-        const longWords = words.filter(word => word.length > 5)
-                              .sort((a, b) => b.length - a.length);
-        if (longWords.length > 0) {
-            return longWords[0];
-        }
-        
-        // Вариант 3: Первые 2 слова
-        return words.slice(0, 2).join(' ');
-    }
-
-    // СОЗДАЕМ ВОПРОС ДЛЯ ДОПОЛНИТЕЛЬНЫХ ПРЕДЛОЖЕНИЙ
-    createDetailQuestion(sentence, index) {
-        const lowerSentence = sentence.toLowerCase();
-        
-        if (lowerSentence.includes('огранич') || lowerSentence.includes('услови')) {
-            return 'Какие ограничения существуют?';
-        }
-        if (lowerSentence.includes('пример') || lowerSentence.includes('например')) {
-            return 'Приведите пример применения';
-        }
-        if (lowerSentence.includes('значен') || lowerSentence.includes('важн')) {
-            return 'Какое значение имеет это понятие?';
-        }
-        if (lowerSentence.includes('свойств') || lowerSentence.includes('особенност')) {
-            return 'Какие свойства существуют?';
-        }
-        if (lowerSentence.includes('применен') || lowerSentence.includes('использ')) {
-            return 'Где применяется?';
-        }
-        
-        // Стандартные вопросы для дополнительных предложений
-        const detailQuestions = [
-            'Какие дополнительные особенности?',
-            'Что ещё важно знать?',
-            'Какие детали нужно учитывать?',
-            'Что уточняется в теореме?',
-            'Какие условия выполнения?'
-        ];
-        
-        return detailQuestions[index % detailQuestions.length];
     }
 
     displayGeneratedCards() {
