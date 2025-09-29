@@ -1,4 +1,4 @@
-// manual.js - ТОЛЬКО АВТОГЕНЕРАЦИЯ
+// manual.js - ПРОСТОЙ РАБОЧИЙ MVP
 
 class MemoryCard {
     constructor(question, answer, category = 'general') {
@@ -29,7 +29,7 @@ class MemoryApp {
         document.getElementById('showAnswerBtn').addEventListener('click', () => this.showAnswer());
         document.getElementById('nextCardBtn').addEventListener('click', () => this.nextCard());
         document.getElementById('addCardBtn').addEventListener('click', () => this.showAddCardForm());
-        document.getElementById('generateCardBtn').addEventListener('click', () => this.generateCard());
+        document.getElementById('generateCardBtn').addEventListener('click', () => this.createCardFromText());
         document.getElementById('cancelCardBtn').addEventListener('click', () => this.hideAddCardForm());
         document.getElementById('exportBtn').addEventListener('click', () => this.exportCards());
         document.getElementById('importBtn').addEventListener('click', () => this.importCards());
@@ -37,7 +37,7 @@ class MemoryApp {
     }
 
     // ПРОСТАЯ ГЕНЕРАЦИЯ КАРТОЧКИ
-    generateCard() {
+    createCardFromText() {
         const textInput = document.getElementById('textInput');
         const text = textInput.value.trim();
         
@@ -46,14 +46,9 @@ class MemoryApp {
             return;
         }
         
-        // Простая логика: первые 2-3 слова = вопрос, весь текст = ответ
-        const words = text.split(' ').filter(word => word.length > 0);
-        
-        // Берем первые 2-3 слова для термина
-        const termCount = Math.min(3, words.length);
-        const term = words.slice(0, termCount).join(' ');
-        
-        const question = `Что такое ${term}?`;
+        // СУПЕРПРОСТАЯ ЛОГИКА:
+        const firstWord = text.split(' ')[0];
+        const question = `Что такое ${firstWord}?`;
         const answer = text;
         
         // Создаем карточку
@@ -64,7 +59,7 @@ class MemoryApp {
         this.showCard(this.cards.length - 1);
         this.updateStats();
         
-        alert('Карточка успешно создана!');
+        alert(`Карточка создана!\nВопрос: ${question}`);
     }
 
     showCard(index = null) {
@@ -73,9 +68,7 @@ class MemoryApp {
             return;
         }
 
-        if (index !== null) {
-            this.currentCardIndex = index;
-        }
+        if (index !== null) this.currentCardIndex = index;
 
         const card = this.cards[this.currentCardIndex];
         document.getElementById('question').textContent = card.question;
@@ -105,14 +98,6 @@ class MemoryApp {
     nextCard() {
         if (this.cards.length === 0) return;
 
-        if (this.isAnswerShown) {
-            const confidence = document.querySelector('input[name="confidence"]:checked');
-            if (confidence) {
-                this.cards[this.currentCardIndex].confidence = parseInt(confidence.value);
-                document.querySelector('input[name="confidence"]:checked').checked = false;
-            }
-        }
-
         this.currentCardIndex = (this.currentCardIndex + 1) % this.cards.length;
         this.showCard();
     }
@@ -132,19 +117,13 @@ class MemoryApp {
         
         const reviewedToday = this.cards.filter(card => {
             if (!card.lastReviewed) return false;
-            const lastReviewed = new Date(card.lastReviewed);
-            const today = new Date();
-            return lastReviewed.toDateString() === today.toDateString();
+            return new Date(card.lastReviewed).toDateString() === new Date().toDateString();
         }).length;
 
         document.getElementById('reviewedToday').textContent = reviewedToday;
     }
 
     updateProgress() {
-        if (this.cards.length === 0) {
-            document.getElementById('progress').textContent = '0/0';
-            return;
-        }
         document.getElementById('progress').textContent = 
             `${this.currentCardIndex + 1}/${this.cards.length}`;
     }
@@ -196,12 +175,10 @@ class MemoryApp {
                     this.saveCards();
                     this.showCard();
                     this.updateStats();
-                    alert(`Успешно импортировано ${importedCards.length} карточек`);
-                } else {
-                    alert('Неверный формат файла');
+                    alert(`Импортировано ${importedCards.length} карточек`);
                 }
             } catch (error) {
-                alert('Ошибка при импорте файла');
+                alert('Ошибка импорта файла');
             }
         };
         reader.readAsText(file);
@@ -209,7 +186,7 @@ class MemoryApp {
     }
 }
 
-// Инициализация приложения
+// Запуск приложения
 document.addEventListener('DOMContentLoaded', () => {
     new MemoryApp();
 });
