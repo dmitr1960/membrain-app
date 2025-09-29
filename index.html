@@ -3,79 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MemBrain</title>
+    <title>MemBrain - AI Тренер памяти</title>
+    <link rel="manifest" href="manifest.json">
     <style>
-        body { font-family: Arial; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
-        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        input, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
-        button { background: #4CAF50; color: white; border: none; cursor: pointer; }
-        button:disabled { background: #ccc; }
-        #result { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 5px; white-space: pre-wrap; }
-        .loading { color: #666; font-style: italic; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .main-interface {
+            padding: 40px;
+        }
+        
+        .text-input-container {
+            margin-bottom: 30px;
+        }
+        
+        #textInput {
+            width: 100%;
+            height: 150px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            font-size: 16px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        
+        #textInput:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        #generateBtn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        #generateBtn:hover {
+            transform: translateY(-2px);
+        }
+        
+        #generateBtn:active {
+            transform: translateY(0);
+        }
+        
+        .cards-container {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .card-question {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .card-answer {
+            font-size: 16px;
+            color: #34495e;
+            line-height: 1.5;
+        }
+        
+        .review-interface {
+            display: none;
+            text-align: center;
+        }
+        
+        .progress-bar {
+            background: #ecf0f1;
+            border-radius: 10px;
+            height: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .question-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .answer-card {
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px 0;
+            display: none;
+            font-size: 18px;
+            line-height: 1.6;
+            color: #34495e;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .action-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .show-answer-btn {
+            background: #3498db;
+            color: white;
+        }
+        
+        .rating-btn {
+            display: none;
+            color: white;
+        }
+        
+        .hard-btn { background: #e74c3c; }
+        .good-btn { background: #f39c12; }
+        .easy-btn { background: #27ae60; }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .main-interface {
+                padding: 20px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>MemBrain</h1>
-        <input type="text" id="topic" placeholder="Введите тему (например, физика)">
-        <button id="memeBtn">🎭 Сгенерировать мем</button>
-        <button id="cardsBtn">📋 Сгенерировать карточки</button>
-        <div id="result">Введите тему и нажмите одну из кнопок</div>
+        <div class="header">
+            <h1>🧠 MemBrain</h1>
+            <p>AI-тренер памяти с интервальными повторениями</p>
+        </div>
+        
+        <div class="main-interface" id="mainInterface">
+            <div class="text-input-container">
+                <textarea id="textInput" placeholder="Введите текст для изучения...&#10;&#10;Пример:&#10;Фотосинтез - это процесс образования органических веществ из неорганических при участии солнечной энергии. Включает световую и темновую фазы. Хлорофилл поглощает световую энергию..."></textarea>
+            </div>
+            <button id="generateBtn">🧠 Сгенерировать карточки</button>
+        </div>
+        
+        <div class="cards-container" id="cardsContainer">
+            <h3>Сгенерированные карточки:</h3>
+            <div id="cardsList"></div>
+            <button id="startReviewBtn" style="width: 100%; padding: 15px; margin-top: 20px; background: #27ae60; color: white; border: none; border-radius: 10px; font-size: 16px;">Начать повторение</button>
+        </div>
+        
+        <div class="review-interface" id="reviewInterface">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="question-card" id="questionCard"></div>
+            <div class="answer-card" id="answerCard"></div>
+            <div class="action-buttons">
+                <button class="action-btn show-answer-btn" id="showAnswerBtn">Показать ответ</button>
+                <button class="action-btn rating-btn hard-btn" id="hardBtn" data-rating="2">😣 Сложно</button>
+                <button class="action-btn rating-btn good-btn" id="goodBtn" data-rating="3">😐 Нормально</button>
+                <button class="action-btn rating-btn easy-btn" id="easyBtn" data-rating="4">😊 Легко</button>
+            </div>
+        </div>
     </div>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw969zowMkIA0wPaaopmt13r8vWXS73Km3tu2tazh72QxuHqTwhVtN7eN1978h5ALcUiA/exec';
-        const topicInput = document.getElementById('topic');
-        const resultDiv = document.getElementById('result');
-        const memeBtn = document.getElementById('memeBtn');
-        const cardsBtn = document.getElementById('cardsBtn');
-        
-        async function generateContent(type) {
-            const topic = topicInput.value.trim();
-            
-            if (!topic) { 
-                resultDiv.innerHTML = '⚠ Введите тему!'; 
-                return; 
-            }
-            
-            // Блокируем кнопки
-            memeBtn.disabled = true;
-            cardsBtn.disabled = true;
-            resultDiv.innerHTML = '<div class="loading">⏳ Генерируем... Это займет 10-20 секунд</div>';
-            
-            try {
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: text=${encodeURIComponent(topic)}&type=${type}
-                });
-                
-                const data = await response.json();
-                
-                if (data.error) {
-                    resultDiv.innerHTML = '❌ Ошибка: ' + data.error;
-                } else if (data.choices && data.choices[0] && data.choices[0].message) {
-                    resultDiv.innerHTML = data.choices[0].message.content;
-                } else {
-                    resultDiv.innerHTML = '❌ Непонятный ответ от сервера';
-                }
-                
-            } catch (error) {
-                resultDiv.innerHTML = '❌ Ошибка подключения: ' + error.message;
-            } finally {
-                // Разблокируем кнопки
-                memeBtn.disabled = false;
-                cardsBtn.disabled = false;
-            }
-        }
-        
-        // Назначаем обработчики
-        memeBtn.addEventListener('click', () => generateContent('meme'));
-        cardsBtn.addEventListener('click', () => generateContent('cards'));
-    });
-</script>
+    <script src="manual.js"></script>
 </body>
 </html>
