@@ -1,4 +1,4 @@
-// ==================== БАЗОВАЯ РАБОЧАЯ ВЕРСИЯ ====================
+// ==================== MEMBRAIN - AI ТРЕНЕР ПАМЯТИ ====================
 
 class SmartFlashcard {
     constructor(question, answer) {
@@ -39,50 +39,91 @@ class SmartFlashcard {
     }
 }
 
-// ПРОСТАЯ И РАБОТАЮЩАЯ ГЕНЕРАЦИЯ КАРТОЧЕК
+// УМНАЯ ГЕНЕРАЦИЯ КАРТОЧЕК
 function generateFlashcards(text) {
-    // Проверка на пустой текст
     if (!text || text.trim().length < 10) {
         return [new SmartFlashcard(
-            "Добавьте текст", 
-            "Введите текст для изучения (минимум 10 символов)"
+            "Добавьте текст для изучения", 
+            "Введите текст длиной от 10 символов для генерации карточек"
         )];
     }
     
-    // Простое разбиение на предложения
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 15);
+    // Очистка текста от мусора
+    const cleanedText = text
+        .replace(/\d+\.\s*/g, '') // Удаляем "1. ", "2. "
+        .replace(/Содержимое ответа/g, '') // Удаляем мусор
+        .replace(/\n/g, '. ') // Заменяем переносы
+        .replace(/\s+/g, ' ') // Убираем лишние пробелы
+        .trim();
+    
+    // Разбиваем на предложения
+    const sentences = cleanedText.split(/[.!?]+/).filter(s => {
+        const trimmed = s.trim();
+        return trimmed.length > 20 && trimmed.split(' ').length >= 4;
+    });
     
     const flashcards = [];
     
-    // Создаем карточки из предложений
-    sentences.forEach((sentence, index) => {
+    // Создаем карточки
+    sentences.forEach((sentence) => {
         const trimmed = sentence.trim();
-        if (!trimmed || trimmed.split(' ').length < 3) return;
+        if (!trimmed) return;
         
-        // Берем первые 2-3 слова для вопроса
-        const words = trimmed.split(' ').filter(word => word.length > 2);
-        if (words.length < 2) return;
+        // Очищаем предложение
+        const cleanSentence = trimmed.replace(/^\d+\s*/, '').trim();
+        if (cleanSentence.length < 15) return;
         
-        const mainConcept = words.slice(0, 2).join(' ');
-        const question = `Что такое ${mainConcept}?`;
-        const answer = trimmed;
+        // Извлекаем ключевые слова
+        const words = cleanSentence.split(' ').filter(word => 
+            word.length > 3 && 
+            !['это', 'также', 'которые', 'который', 'например', 'процесс'].includes(word.toLowerCase())
+        );
+        
+        let mainConcept;
+        if (words.length >= 2) {
+            mainConcept = words.slice(0, 2).join(' ');
+        } else {
+            // Резервный вариант
+            const allWords = cleanSentence.split(' ').filter(word => word.length > 2);
+            mainConcept = allWords.slice(1, 3).join(' ') || allWords.slice(0, 2).join(' ');
+        }
+        
+        if (!mainConcept || mainConcept.split(' ').length < 2) return;
+        
+        // Создаем вопрос в зависимости от содержания
+        let question;
+        const lowerSentence = cleanSentence.toLowerCase();
+        
+        if (lowerSentence.includes('это') || lowerSentence.includes('означает')) {
+            question = `Дайте определение: ${mainConcept}`;
+        } else if (lowerSentence.includes('например') || lowerSentence.includes('пример')) {
+            question = `Приведите пример: ${mainConcept}`;
+        } else if (lowerSentence.includes('функция') || lowerSentence.includes('назначение')) {
+            question = `Какие функции у ${mainConcept}?`;
+        } else {
+            question = `Объясните: ${mainConcept}`;
+        }
+        
+        const answer = cleanSentence;
         
         flashcards.push(new SmartFlashcard(question, answer));
     });
     
-    // Если карточек мало, создаем одну общую
-    if (flashcards.length === 0) {
-        const firstWords = text.split(' ').slice(0, 3).join(' ');
-        flashcards.push(new SmartFlashcard(
-            `Что такое ${firstWords}?`,
-            text.substring(0, 100) + '...'
-        ));
+    // Гарантируем хотя бы 2 карточки
+    if (flashcards.length < 2) {
+        const firstWords = cleanedText.split(' ').filter(word => word.length > 3).slice(0, 2).join(' ');
+        flashcards.push(
+            new SmartFlashcard(
+                `Основная тема: ${firstWords || 'текста'}`,
+                cleanedText.substring(0, 120) + (cleanedText.length > 120 ? '...' : '')
+            )
+        );
     }
     
     return flashcards.slice(0, 8);
 }
 
-// ==================== СИСТЕМА ПОВТОРЕНИЙ ====================
+// ==================== СИСТЕМА ИНТЕРФЕЙСА ====================
 
 let currentCards = [];
 let reviewCards = [];
@@ -101,7 +142,7 @@ document.getElementById('generateBtn').addEventListener('click', function() {
     displayCards(currentCards);
 });
 
-// Показ карточек
+// Показ сгенерированных карточек
 function displayCards(cards) {
     const cardsList = document.getElementById('cardsList');
     const cardsContainer = document.getElementById('cardsContainer');
@@ -123,7 +164,7 @@ function displayCards(cards) {
     cardsContainer.style.display = 'block';
 }
 
-// Система повторений
+// Начало повторения
 document.getElementById('startReviewBtn').addEventListener('click', function() {
     startReviewSession();
 });
@@ -138,6 +179,7 @@ function startReviewSession() {
     showNextCard();
 }
 
+// Показ следующей карточки
 function showNextCard() {
     if (currentReviewIndex >= reviewCards.length) {
         endReviewSession();
@@ -158,6 +200,7 @@ function showNextCard() {
     document.getElementById('easyBtn').style.display = 'none';
 }
 
+// Показ ответа
 document.getElementById('showAnswerBtn').addEventListener('click', function() {
     document.getElementById('answerCard').style.display = 'block';
     document.getElementById('showAnswerBtn').style.display = 'none';
@@ -166,7 +209,7 @@ document.getElementById('showAnswerBtn').addEventListener('click', function() {
     document.getElementById('easyBtn').style.display = 'inline-block';
 });
 
-// Кнопки оценки
+// Настройка кнопок оценки
 function setupRatingButtons() {
     document.getElementById('hardBtn').addEventListener('click', function() {
         rateCard(2);
@@ -181,6 +224,7 @@ function setupRatingButtons() {
     });
 }
 
+// Оценка карточки
 function rateCard(rating) {
     const card = reviewCards[currentReviewIndex];
     card.updateInterval(rating);
@@ -191,6 +235,7 @@ function rateCard(rating) {
     showNextCard();
 }
 
+// Завершение сессии
 function endReviewSession() {
     alert('Повторение завершено! 🎉\n\nСледующее повторение через день\n\nПрогресс сохранен.');
     
@@ -199,6 +244,7 @@ function endReviewSession() {
     document.getElementById('textInput').value = '';
 }
 
+// Сохранение прогресса
 function saveProgress() {
     const progress = {
         cards: currentCards.map(card => ({
@@ -214,7 +260,22 @@ function saveProgress() {
     localStorage.setItem('membrainProgress', JSON.stringify(progress));
 }
 
-// Инициализация
+// Загрузка прогресса
+function loadProgress() {
+    const saved = localStorage.getItem('membrainProgress');
+    if (saved) {
+        try {
+            const progress = JSON.parse(saved);
+            console.log('Загружен прогресс:', progress);
+        } catch (e) {
+            console.log('Ошибка загрузки прогресса:', e);
+        }
+    }
+}
+
+// Инициализация приложения
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('MemBrain инициализирован');
     setupRatingButtons();
+    loadProgress();
 });
