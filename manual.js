@@ -1,4 +1,4 @@
-// manual.js - ПРОСТОЙ РАБОЧИЙ ВАРИАНТ
+// manual.js - ТОЛЬКО АВТОГЕНЕРАЦИЯ
 
 class MemoryCard {
     constructor(question, answer, category = 'general') {
@@ -29,31 +29,34 @@ class MemoryApp {
         document.getElementById('showAnswerBtn').addEventListener('click', () => this.showAnswer());
         document.getElementById('nextCardBtn').addEventListener('click', () => this.nextCard());
         document.getElementById('addCardBtn').addEventListener('click', () => this.showAddCardForm());
-        document.getElementById('saveCardBtn').addEventListener('click', () => this.saveCard());
-        document.getElementById('cancelCardBtn').addEventListener('click', () => this.hideAddCardForm());
         document.getElementById('generateCardBtn').addEventListener('click', () => this.generateCard());
+        document.getElementById('cancelCardBtn').addEventListener('click', () => this.hideAddCardForm());
         document.getElementById('exportBtn').addEventListener('click', () => this.exportCards());
         document.getElementById('importBtn').addEventListener('click', () => this.importCards());
         document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileImport(e));
     }
 
-    // ПРОСТАЯ ГЕНЕРАЦИЯ КАРТОЧЕК
+    // ПРОСТАЯ ГЕНЕРАЦИЯ КАРТОЧКИ
     generateCard() {
         const textInput = document.getElementById('textInput');
         const text = textInput.value.trim();
         
         if (!text) {
-            alert('Введите текст для генерации карточки');
+            alert('Введите текст для создания карточки');
             return;
         }
         
-        // Простая логика: первое слово = вопрос, весь текст = ответ
-        const words = text.split(' ');
-        const firstWord = words[0];
-        const question = `Что такое ${firstWord}?`;
+        // Простая логика: первые 2-3 слова = вопрос, весь текст = ответ
+        const words = text.split(' ').filter(word => word.length > 0);
+        
+        // Берем первые 2-3 слова для термина
+        const termCount = Math.min(3, words.length);
+        const term = words.slice(0, termCount).join(' ');
+        
+        const question = `Что такое ${term}?`;
         const answer = text;
         
-        // Сразу создаем карточку
+        // Создаем карточку
         const card = new MemoryCard(question, answer);
         this.cards.push(card);
         this.saveCards();
@@ -116,32 +119,12 @@ class MemoryApp {
 
     showAddCardForm() {
         document.getElementById('addCardModal').style.display = 'block';
+        document.getElementById('textInput').focus();
     }
 
     hideAddCardForm() {
         document.getElementById('addCardModal').style.display = 'none';
-        document.getElementById('manualQuestion').value = '';
-        document.getElementById('manualAnswer').value = '';
         document.getElementById('textInput').value = '';
-    }
-
-    saveCard() {
-        const question = document.getElementById('manualQuestion').value.trim();
-        const answer = document.getElementById('manualAnswer').value.trim();
-
-        if (!question || !answer) {
-            alert('Заполните вопрос и ответ');
-            return;
-        }
-
-        const card = new MemoryCard(question, answer);
-        this.cards.push(card);
-        this.saveCards();
-        this.hideAddCardForm();
-        this.showCard(this.cards.length - 1);
-        this.updateStats();
-        
-        alert('Карточка успешно сохранена!');
     }
 
     updateStats() {
