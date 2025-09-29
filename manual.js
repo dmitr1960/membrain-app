@@ -1,160 +1,243 @@
-// ==================== УЛУЧШЕННАЯ AI-ГЕНЕРАЦИЯ ====================
+// ==================== ПРОСТАЯ И РАБОЧАЯ AI-ГЕНЕРАЦИЯ ====================
 
-// Улучшенная функция извлечения основного понятия
-function extractMainConcept(sentence) {
-    // Очищаем предложение от мусора
-    let cleaned = sentence
-        .replace(/^\d+\.?\s*/, '') // Удаляем начальные цифры
-        .replace(/^[-•]\s*/, '')   // Удаляем маркеры списка
-        .trim();
+class SmartFlashcard {
+    constructor(question, answer) {
+        this.id = Date.now() + Math.random();
+        this.question = question;
+        this.answer = answer;
+        this.interval = 1;
+        this.repetition = 0;
+        this.easeFactor = 2.5;
+        this.nextReview = new Date();
+        this.lastScore = null;
+        this.createdDate = new Date();
+    }
     
-    // Удаляем начальные стоп-слова
-    cleaned = cleaned.replace(/^(это|также|например|которые|который|содержащие|является|включает)\s+/i, '');
-    
-    // Разбиваем на слова и фильтруем
-    const words = cleaned.split(/\s+/).filter(word => {
-        const lowerWord = word.toLowerCase();
-        return word.length > 2 && 
-               !['это', 'также', 'которые', 'который', 'содержащие', 'является', 
-                 'например', 'процесс', 'может', 'имеет', 'быть', 'очень', 'как', 'что'].includes(lowerWord);
-    });
-    
-    // Берем 2-3 наиболее значимых слова
-    let concept = words.slice(0, 3).join(' ');
-    
-    // Убираем знаки препинания в конце
-    concept = concept.replace(/[.,;:!?]$/, '');
-    
-    return concept || 'данное понятие';
-}
-
-// Улучшенная генерация вопросов и ответов
-function generateQuestionAnswer(sentence, index) {
-    const trimmedSentence = sentence.trim();
-    const lowerSentence = trimmedSentence.toLowerCase();
-    
-    // Обработка определений (начинаются с "это")
-    if (lowerSentence.includes('это') || index === 0) {
-        const concept = extractMainConcept(trimmedSentence);
-        // Проверяем, чтобы не было дублирования "Что такое"
-        if (!concept.toLowerCase().includes('что такое') && concept.length > 5) {
-            return {
-                question: `Что такое ${concept}?`,
-                answer: trimmedSentence
-            };
+    updateInterval(quality) {
+        if (quality < 3) {
+            this.interval = 1;
+            this.repetition = 0;
+        } else {
+            if (this.repetition === 0) this.interval = 1;
+            else if (this.repetition === 1) this.interval = 3;
+            else this.interval = Math.round(this.interval * this.easeFactor);
+            
+            this.repetition++;
         }
+        
+        this.easeFactor += 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02);
+        this.easeFactor = Math.max(1.3, Math.min(this.easeFactor, 5.0));
+        
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + this.interval);
+        this.nextReview = nextDate;
+        this.lastScore = quality;
     }
     
-    // Обработка процессов и стадий
-    if (lowerSentence.includes('стадии') || lowerSentence.includes('этапы')) {
-        const concept = extractMainConcept(trimmedSentence);
-        return {
-            question: `Какие стадии включает ${concept}?`,
-            answer: trimmedSentence
-        };
+    needsReview() {
+        return new Date() >= this.nextReview;
     }
-    
-    // Обработка функций и назначения
-    if (lowerSentence.includes('функция') || lowerSentence.includes('назначение') || 
-        lowerSentence.includes('служит') || lowerSentence.includes('используется')) {
-        const concept = extractMainConcept(trimmedSentence);
-        return {
-            question: `Какие функции выполняет ${concept}?`,
-            answer: trimmedSentence
-        };
-    }
-    
-    // Обработка математических понятий
-    if (lowerSentence.includes('вероятность') || lowerSentence.includes('число') || 
-        lowerSentence.includes('равна') || lowerSentence.includes('формула')) {
-        const concept = extractMainConcept(trimmedSentence);
-        return {
-            question: `Как определяется ${concept}?`,
-            answer: trimmedSentence
-        };
-    }
-    
-    // Обработка примеров
-    if (lowerSentence.includes('например') || lowerSentence.includes('пример')) {
-        const concept = extractMainConcept(trimmedSentence.replace(/например\s+/i, ''));
-        return {
-            question: `Приведите пример ${concept}`,
-            answer: trimmedSentence
-        };
-    }
-    
-    // Улучшенный вопрос по умолчанию
-    return generateDefaultQA(trimmedSentence);
 }
 
-// Улучшенный вопрос по умолчанию
-function generateDefaultQA(sentence) {
-    const concept = extractMainConcept(sentence);
-    
-    // Если concept слишком короткий, используем другую логику
-    if (concept.split(' ').length < 2) {
-        const words = sentence.split(' ').slice(0, 4).join(' ');
-        return {
-            question: `Что означает "${words}"?`,
-            answer: sentence
-        };
+// Простая и надежная генерация карточек
+function generateFlashcards(text) {
+    if (!text || text.trim().length < 10) {
+        return [new SmartFlashcard(
+            "Текст слишком короткий", 
+            "Добавьте больше информации для генерации карточек (минимум 10 символов)"
+        )];
     }
     
-    const firstWord = concept.split(' ')[0].toLowerCase();
+    console.log("Генерация карточек для текста:", text.substring(0, 100));
     
-    const questionTemplates = {
-        'как': `Как работает ${concept}?`,
-        'что': `Что такое ${concept}?`, 
-        'где': `Где применяется ${concept}?`,
-        'когда': `Когда используется ${concept}?`,
-        'почему': `Почему важен ${concept}?`,
-        'какие': `Какие особенности имеет ${concept}?`,
-        'какой': `Какой принцип у ${concept}?`
-    };
-    
-    const question = questionTemplates[firstWord] || `Что такое ${concept}?`;
-    
-    return {
-        question: question,
-        answer: sentence
-    };
-}
-
-// Улучшенная резервная генерация
-function generateBackupFlashcards(text) {
-    // Более интеллектуальное разбиение на предложения
+    // Простое разбиение на предложения
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 15);
+    console.log("Найдено предложений:", sentences.length);
+    
     const flashcards = [];
     
     sentences.forEach((sentence, index) => {
         const trimmed = sentence.trim();
-        if (trimmed.length < 20) return;
+        if (!trimmed || trimmed.length < 20) return;
         
-        const concept = extractMainConcept(trimmed);
-        if (concept && concept.length > 3) {
-            // Избегаем дублирования вопросов
-            const existingQuestion = flashcards.find(card => 
-                card.question.includes(concept) || concept.includes(card.question)
-            );
-            
-            if (!existingQuestion) {
-                flashcards.push(new SmartFlashcard(
-                    `Что такое ${concept}?`,
-                    trimmed
-                ));
-            }
-        }
+        // Простая логика - первое существительное становится вопросом
+        const words = trimmed.split(' ').filter(word => word.length > 3);
+        if (words.length < 3) return;
+        
+        const mainConcept = words.slice(0, 3).join(' ').replace(/[.,;:]$/, '');
+        const question = `Что такое ${mainConcept}?`;
+        const answer = trimmed;
+        
+        flashcards.push(new SmartFlashcard(question, answer));
     });
     
-    // Если карточек мало, создаем обобщающие
-    if (flashcards.length < 3) {
-        const mainTopics = text.split(/[.!?]/)[0]; // Первое предложение
-        const mainConcept = extractMainConcept(mainTopics);
+    console.log("Сгенерировано карточек:", flashcards.length);
+    
+    // Если карточек мало, создаем одну общую
+    if (flashcards.length === 0) {
+        const firstSentence = text.split(/[.!?]+/)[0].substring(0, 100);
+        const words = firstSentence.split(' ').filter(word => word.length > 3);
+        const mainConcept = words.slice(0, 2).join(' ') || 'главная тема';
+        
         flashcards.push(new SmartFlashcard(
             `Что такое ${mainConcept}?`,
-            text.slice(0, 150) + '...'
+            firstSentence + '...'
         ));
     }
     
-    return flashcards.slice(0, 6);
+    return flashcards.slice(0, 8);
 }
+
+// ==================== ИНТЕРФЕЙС И УПРАВЛЕНИЕ ====================
+
+let currentCards = [];
+let reviewCards = [];
+let currentReviewIndex = 0;
+
+document.getElementById('generateBtn').addEventListener('click', function() {
+    const text = document.getElementById('textInput').value.trim();
+    console.log("Нажата кнопка генерации, текст:", text);
+    
+    if (text.length < 10) {
+        alert('Пожалуйста, введите текст для изучения (минимум 10 символов)');
+        return;
+    }
+    
+    currentCards = generateFlashcards(text);
+    console.log("Карточки сгенерированы:", currentCards);
+    displayCards(currentCards);
+});
+
+function displayCards(cards) {
+    const cardsList = document.getElementById('cardsList');
+    const cardsContainer = document.getElementById('cardsContainer');
+    const mainInterface = document.getElementById('mainInterface');
+    
+    console.log("Отображение карточек:", cards.length);
+    
+    cardsList.innerHTML = '';
+    
+    cards.forEach((card, index) => {
+        const cardElement = document.createElement('div');
+        cardElement.className = 'card';
+        cardElement.innerHTML = `
+            <div class="card-question">${index + 1}. ${card.question}</div>
+            <div class="card-answer">${card.answer}</div>
+        `;
+        cardsList.appendChild(cardElement);
+    });
+    
+    mainInterface.style.display = 'none';
+    cardsContainer.style.display = 'block';
+}
+
+// Остальной код оставляем без изменений...
+document.getElementById('startReviewBtn').addEventListener('click', function() {
+    startReviewSession();
+});
+
+function startReviewSession() {
+    reviewCards = [...currentCards];
+    currentReviewIndex = 0;
+    
+    document.getElementById('cardsContainer').style.display = 'none';
+    document.getElementById('reviewInterface').style.display = 'block';
+    
+    showNextCard();
+}
+
+function showNextCard() {
+    if (currentReviewIndex >= reviewCards.length) {
+        endReviewSession();
+        return;
+    }
+    
+    const card = reviewCards[currentReviewIndex];
+    const progress = ((currentReviewIndex) / reviewCards.length) * 100;
+    
+    document.getElementById('questionCard').textContent = card.question;
+    document.getElementById('answerCard').style.display = 'none';
+    document.getElementById('answerCard').textContent = card.answer;
+    
+    document.getElementById('progressFill').style.width = progress + '%';
+    document.getElementById('showAnswerBtn').style.display = 'block';
+    document.getElementById('hardBtn').style.display = 'none';
+    document.getElementById('goodBtn').style.display = 'none';
+    document.getElementById('easyBtn').style.display = 'none';
+}
+
+document.getElementById('showAnswerBtn').addEventListener('click', function() {
+    document.getElementById('answerCard').style.display = 'block';
+    document.getElementById('showAnswerBtn').style.display = 'none';
+    document.getElementById('hardBtn').style.display = 'inline-block';
+    document.getElementById('goodBtn').style.display = 'inline-block';
+    document.getElementById('easyBtn').style.display = 'inline-block';
+});
+
+function setupRatingButtons() {
+    document.getElementById('hardBtn').addEventListener('click', function() {
+        rateCard(2);
+    });
+    
+    document.getElementById('goodBtn').addEventListener('click', function() {
+        rateCard(3);
+    });
+    
+    document.getElementById('easyBtn').addEventListener('click', function() {
+        rateCard(4);
+    });
+}
+
+function rateCard(rating) {
+    const card = reviewCards[currentReviewIndex];
+    card.updateInterval(rating);
+    
+    saveProgress();
+    
+    currentReviewIndex++;
+    showNextCard();
+}
+
+function endReviewSession() {
+    alert('Повторение завершено! 🎉\n\nСледующее повторение через: ' + 
+          getNextReviewTime() + '\n\nПрогресс сохранен.');
+    
+    document.getElementById('reviewInterface').style.display = 'none';
+    document.getElementById('mainInterface').style.display = 'block';
+    document.getElementById('textInput').value = '';
+}
+
+function getNextReviewTime() {
+    const nextReview = new Date();
+    nextReview.setDate(nextReview.getDate() + 1);
+    return nextReview.toLocaleDateString('ru-RU');
+}
+
+function saveProgress() {
+    const progress = {
+        cards: currentCards.map(card => ({
+            id: card.id,
+            interval: card.interval,
+            repetition: card.repetition,
+            easeFactor: card.easeFactor,
+            nextReview: card.nextReview
+        })),
+        lastReview: new Date()
+    };
+    
+    localStorage.setItem('membrainProgress', JSON.stringify(progress));
+}
+
+function loadProgress() {
+    const saved = localStorage.getItem('membrainProgress');
+    if (saved) {
+        console.log("Загружен прогресс:", JSON.parse(saved));
+    }
+}
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("MemBrain инициализирован");
+    setupRatingButtons();
+    loadProgress();
+});
