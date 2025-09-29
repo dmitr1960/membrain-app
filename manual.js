@@ -1,4 +1,4 @@
-// manual.js - ФИНАЛЬНЫЙ РАБОЧИЙ КОД
+// manual.js - ПРОСТОЙ И РАБОЧИЙ КОД
 
 class MemoryCard {
     constructor(question, answer) {
@@ -69,171 +69,92 @@ class MemoryApp {
         
         this.cards = [];
         
-        // УНИВЕРСАЛЬНЫЙ ПАРСИНГ ЛЮБОГО ТЕКСТА
-        const cards = this.parseUniversalText(text);
+        // ПРОСТОЙ ПАРСИНГ - РАЗБИВАЕМ НА ПРЕДЛОЖЕНИЯ И СОЗДАЕМ ЛОГИЧНЫЕ ВОПРОСЫ
+        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
         
-        if (cards.length === 0) {
-            alert('Не удалось извлечь информацию из текста. Попробуйте более структурированный текст.');
+        if (sentences.length === 0) {
+            alert('Не удалось извлечь предложения из текста');
             return;
         }
         
-        this.cards = cards;
+        // ДЛЯ ПЕРВОГО ПРЕДЛОЖЕНИЯ - ВОПРОС О ГЛАВНОМ ПОНЯТИИ
+        if (sentences.length >= 1) {
+            const firstSentence = sentences[0].trim();
+            const mainConcept = this.findMainConcept(firstSentence);
+            this.cards.push(new MemoryCard(
+                `Что такое ${mainConcept}?`,
+                firstSentence
+            ));
+        }
+        
+        // ДЛЯ ОСТАЛЬНЫХ ПРЕДЛОЖЕНИЙ - ВОПРОСЫ О ДЕТАЛЯХ
+        for (let i = 1; i < sentences.length; i++) {
+            const sentence = sentences[i].trim();
+            if (sentence.length > 0) {
+                const question = this.createDetailQuestion(sentence, i);
+                this.cards.push(new MemoryCard(question, sentence));
+            }
+        }
+        
         this.saveCards();
         this.displayGeneratedCards();
         alert(`Сгенерировано ${this.cards.length} карточек!`);
     }
 
-    // УНИВЕРСАЛЬНЫЙ ПАРСИНГ ТЕКСТА
-    parseUniversalText(text) {
-        const cards = [];
+    // НАХОДИМ ГЛАВНОЕ ПОНЯТИЕ В ПЕРВОМ ПРЕДЛОЖЕНИИ
+    findMainConcept(sentence) {
+        // Ищем слова с большой буквы в начале предложения
+        const words = sentence.split(' ');
         
-        // Очищаем текст от мусора
-        const cleanText = text
-            .replace(/Содержимое ответа\s*/gi, '')
-            .replace(/Ответ:\s*/gi, '')
-            .replace(/\n+/g, '. ')
-            .replace(/\s+/g, ' ')
-            .trim();
-        
-        // Разбиваем на предложения
-        const sentences = cleanText.split(/[.!?]+/).filter(s => {
-            const clean = s.trim();
-            return clean.length > 10 && clean.split(' ').length > 3;
-        });
-        
-        if (sentences.length === 0) {
-            // Если не нашли предложений, создаем одну карточку из всего текста
-            const mainTerm = this.extractMainTerm(cleanText);
-            if (mainTerm && cleanText.length > 20) {
-                cards.push(new MemoryCard(
-                    `Что такое ${mainTerm}?`,
-                    cleanText
-                ));
+        // Вариант 1: Первые 2-3 слова если они с большой буквы
+        if (words.length >= 2 && words[0][0] === words[0][0].toUpperCase()) {
+            if (words[1][0] === words[1][0].toUpperCase()) {
+                return words.slice(0, 2).join(' ');
             }
-            return cards;
+            return words[0];
         }
         
-        // Создаем карточки из предложений
-        sentences.forEach(sentence => {
-            const cleanSentence = sentence.trim();
-            if (cleanSentence.length > 0) {
-                const mainTerm = this.extractMainTerm(cleanSentence);
-                if (mainTerm) {
-                    cards.push(new MemoryCard(
-                        `Что такое ${mainTerm}?`,
-                        cleanSentence
-                    ));
-                }
-            }
-        });
+        // Вариант 2: Ищем самое длинное слово
+        const longWords = words.filter(word => word.length > 5)
+                              .sort((a, b) => b.length - a.length);
+        if (longWords.length > 0) {
+            return longWords[0];
+        }
         
-        return cards;
+        // Вариант 3: Первые 2 слова
+        return words.slice(0, 2).join(' ');
     }
 
-    // ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ - ИЗВЛЕЧЕНИЕ ТЕРМИНОВ
-    extractMainTerm(text) {
-        let cleanText = text.replace(/^Что такое\s+/i, '').trim();
+    // СОЗДАЕМ ВОПРОС ДЛЯ ДОПОЛНИТЕЛЬНЫХ ПРЕДЛОЖЕНИЙ
+    createDetailQuestion(sentence, index) {
+        const lowerSentence = sentence.toLowerCase();
         
-        // УБИРАЕМ ВСЕ СТОП-СЛОВА В НАЧАЛЕ ПРЕДЛОЖЕНИЯ
-        const words = cleanText.split(' ');
-        
-        // Находим ПЕРВОЕ значимое слово (игнорируя предлоги, местоимения и т.д.)
-        let startIndex = 0;
-        for (let i = 0; i < words.length; i++) {
-            const word = words[i].toLowerCase().replace(/[^a-яё]/g, '');
-            if (word.length >= 4 && !this.isStopWord(word)) {
-                startIndex = i;
-                break;
-            }
+        if (lowerSentence.includes('огранич') || lowerSentence.includes('услови')) {
+            return 'Какие ограничения существуют?';
+        }
+        if (lowerSentence.includes('пример') || lowerSentence.includes('например')) {
+            return 'Приведите пример применения';
+        }
+        if (lowerSentence.includes('значен') || lowerSentence.includes('важн')) {
+            return 'Какое значение имеет это понятие?';
+        }
+        if (lowerSentence.includes('свойств') || lowerSentence.includes('особенност')) {
+            return 'Какие свойства существуют?';
+        }
+        if (lowerSentence.includes('применен') || lowerSentence.includes('использ')) {
+            return 'Где применяется?';
         }
         
-        // Берем 2-3 слова НАЧИНАЯ С ПЕРВОГО ЗНАЧИМОГО
-        const meaningfulWords = words.slice(startIndex);
-        
-        if (meaningfulWords.length >= 3) {
-            // Пробуем комбинации: 2 слова, 3 слова
-            const candidate2 = meaningfulWords.slice(0, 2).join(' ');
-            const candidate3 = meaningfulWords.slice(0, 3).join(' ');
-            
-            // Выбираем лучшую комбинацию
-            if (candidate2.length >= 6 && candidate2.length <= 25) {
-                return this.cleanTerm(candidate2);
-            }
-            if (candidate3.length >= 6 && candidate3.length <= 30) {
-                return this.cleanTerm(candidate3);
-            }
-        }
-        
-        if (meaningfulWords.length >= 2) {
-            const candidate = meaningfulWords.slice(0, 2).join(' ');
-            if (candidate.length >= 4) {
-                return this.cleanTerm(candidate);
-            }
-        }
-        
-        if (meaningfulWords.length >= 1) {
-            return this.cleanTerm(meaningfulWords[0]);
-        }
-        
-        return 'основное понятие';
-    }
-
-    // ОЧИСТКА ТЕРМИНА
-    cleanTerm(term) {
-        return term
-            .replace(/^[^a-яё]*|[^a-яё]*$/gi, '')
-            .replace(/[.,:;!?]$/, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
-
-    // ОБНОВЛЕННЫЙ СПИСОК СТОП-СЛОВ
-    isStopWord(word) {
-        const stopWords = [
-            // Предлоги и союзы
-            'это', 'что', 'как', 'для', 'при', 'из', 'от', 'на', 'в', 'с', 'по', 'у',
-            'о', 'за', 'до', 'не', 'но', 'или', 'и', 'да', 'нет', 'если', 'то',
-            'так', 'же', 'бы', 'вот', 'там', 'тут', 'здесь', 'где', 'когда',
-            'потому', 'поэтому', 'чтобы', 'который', 'какой', 'чей', 'сколько',
-            
-            // Местоимения
-            'она', 'они', 'его', 'её', 'их', 'ему', 'ей', 'им', 'оно', 
-            'все', 'всё', 'весь', 'вся', 'всех', 'всем', 'всеми',
-            'кто', 'чего', 'чем', 'ком', 'чём', 'том', 'тем', 'та', 'те',
-            'мой', 'твой', 'свой', 'наш', 'ваш', 'ихний',
-            
-            // Служебные слова для определений
-            'формулировка', 'определение', 'понятие', 'теория', 'закон',
-            'теорема', 'аксиома', 'лемма', 'свойство', 'признак',
-            
-            // Короткие неинформативные слова
-            'есть', 'быть', 'стать', 'можно', 'нужно', 'должен',
-            'может', 'должно', 'следует', 'следуют', 'является',
-            
-            // Другие неинформативные слова
-            'очень', 'просто', 'точно', 'верно', 'правильно', 'неправильно',
-            'хорошо', 'плохо', 'больше', 'меньше', 'сильно', 'слабо',
-            
-            // Временные и количественные
-            'время', 'раз', 'два', 'три', 'первый', 'второй', 'третий',
-            'много', 'мало', 'несколько', 'каждый', 'любой', 'весь',
-            
-            // Вопросительные
-            'кто', 'что', 'какой', 'каков', 'чей', 'который', 'сколько',
-            
-            // Указательные  
-            'этот', 'тот', 'такой', 'таков', 'столько', 'сей',
-            
-            // Отрицательные
-            'никто', 'ничто', 'никакой', 'ничей', 'никоторый', 'нисколько',
-            
-            // Неопределенные
-            'некто', 'нечто', 'некий', 'некоторый', 'несколько', 'кое-кто',
-            
-            // Притяжательные
-            'мой', 'твой', 'свой', 'наш', 'ваш', 'его', 'её', 'их'
+        // Стандартные вопросы для дополнительных предложений
+        const detailQuestions = [
+            'Какие дополнительные особенности?',
+            'Что ещё важно знать?',
+            'Какие детали нужно учитывать?',
+            'Что уточняется в теореме?',
+            'Какие условия выполнения?'
         ];
-        return stopWords.includes(word);
+        
+        return detailQuestions[index % detailQuestions.length];
     }
 
     displayGeneratedCards() {
@@ -349,6 +270,6 @@ class MemoryApp {
 }
 
 // Запуск приложения
-document.addEventListener('DOMContentLoaded', () {
+document.addEventListener('DOMContentLoaded', () => {
     new MemoryApp().init();
 });
