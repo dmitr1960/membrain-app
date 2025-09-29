@@ -1,0 +1,17 @@
+{
+  "name": "MemBrain - AI Тренер памяти",
+  "short_name": "MemBrain",
+  "description": "Приложение для запоминания с AI-генерацией карточек и интервальными повторениями",
+  "start_url": "/membrain-app/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#667eea",
+  "icons": [
+    {
+      "src": "icons/brain.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
