@@ -1,4 +1,4 @@
-// manual.js - ПОЛНЫЙ ИСПРАВЛЕННЫЙ КОД
+// manual.js - ФИНАЛЬНЫЙ ИСПРАВЛЕННЫЙ КОД
 
 class MemoryCard {
     constructor(question, answer) {
@@ -24,8 +24,6 @@ class MemoryApp {
     }
 
     bindEvents() {
-        console.log('Привязка событий...');
-        
         const elements = {
             generateBtn: document.getElementById('generateBtn'),
             startReviewBtn: document.getElementById('startReviewBtn'),
@@ -35,13 +33,8 @@ class MemoryApp {
             easyBtn: document.getElementById('easyBtn')
         };
         
-        console.log('Найденные элементы:', elements);
-        
         if (elements.generateBtn) {
             elements.generateBtn.addEventListener('click', () => this.generateCards());
-            console.log('Кнопка generateBtn привязана');
-        } else {
-            console.error('Кнопка generateBtn не найдена!');
         }
         
         if (elements.startReviewBtn) {
@@ -66,17 +59,10 @@ class MemoryApp {
     }
 
     generateCards() {
-        console.log('Генерация карточек...');
-        
         const textInput = document.getElementById('textInput');
-        if (!textInput) {
-            alert('Поле ввода не найдено!');
-            return;
-        }
+        if (!textInput) return;
         
         const text = textInput.value.trim();
-        console.log('Введенный текст:', text);
-        
         if (!text) {
             alert('Введите текст для генерации карточек');
             return;
@@ -84,22 +70,20 @@ class MemoryApp {
         
         this.cards = [];
         
-        // УЛУЧШЕННОЕ разбиение на смысловые блоки
-        const blocks = this.splitTextIntoBlocks(text);
-        console.log('Найдено блоков:', blocks.length);
+        // ОЧИСТКА ТЕКСТА ОТ МУСОРА
+        const cleanText = this.cleanInputText(text);
+        const blocks = this.splitTextIntoBlocks(cleanText);
         
         if (blocks.length === 0) {
             alert('Не удалось извлечь информацию из текста.');
             return;
         }
         
-        // Создаем карточки из каждого блока
+        // СОЗДАЕМ КАРТОЧКИ ИЗ КАЖДОГО БЛОКА
         blocks.forEach(block => {
             const { question, answer } = this.generateCardFromBlock(block);
-            
             if (question && answer) {
                 this.cards.push(new MemoryCard(question, answer));
-                console.log('Создана карточка:', { question, answer });
             }
         });
         
@@ -108,29 +92,40 @@ class MemoryApp {
         alert(`Сгенерировано ${this.cards.length} карточек!`);
     }
 
+    // ОЧИСТКА ВХОДНОГО ТЕКСТА ОТ МУСОРА
+    cleanInputText(text) {
+        return text
+            .replace(/Содержимое ответа\s*/gi, '') // Убираем "Содержимое ответа"
+            .replace(/Ответ:\s*/gi, '') // Убираем "Ответ:"
+            .replace(/Вопрос:\s*/gi, '') // Убираем "Вопрос:"
+            .replace(/\d+\.\s*(?=\d+\.)/g, '\n') // Разбиваем нумерованные списки
+            .replace(/\n+/g, '. ') // Заменяем переносы на точки
+            .replace(/\s+/g, ' ') // Убираем лишние пробелы
+            .trim();
+    }
+
+    // РАЗБИЕНИЕ НА СМЫСЛОВЫЕ БЛОКИ
     splitTextIntoBlocks(text) {
-        // Сначала разбиваем на предложения
-        const sentences = text.split(/[.!?]+/).filter(s => {
+        // Сначала разбиваем по точкам, воскл. и вопр. знакам
+        let sentences = text.split(/[.!?]+/).filter(s => {
             const clean = s.trim();
-            return clean.length > 10 && clean.split(' ').length > 2;
+            return clean.length > 20; // Только значимые предложения
         });
         
-        // Объединяем короткие связанные предложения
+        // Объединяем очень короткие предложения
         const blocks = [];
         let currentBlock = '';
         
         for (let i = 0; i < sentences.length; i++) {
             const sentence = sentences[i].trim();
-            const words = sentence.split(' ');
+            const words = sentence.split(' ').length;
             
-            if (words.length <= 5 && i < sentences.length - 1) {
+            if (words < 8 && i < sentences.length - 1) {
                 // Короткое предложение - объединяем со следующим
-                currentBlock += (currentBlock ? ' ' : '') + sentence;
+                currentBlock += (currentBlock ? ' ' : '') + sentence + '.';
             } else {
-                // Длинное предложение или конец текста
                 if (currentBlock) {
-                    currentBlock += ' ' + sentence;
-                    blocks.push(currentBlock);
+                    blocks.push(currentBlock + ' ' + sentence);
                     currentBlock = '';
                 } else {
                     blocks.push(sentence);
@@ -138,121 +133,116 @@ class MemoryApp {
             }
         }
         
-        if (currentBlock) {
-            blocks.push(currentBlock);
-        }
-        
-        return blocks;
+        return blocks.filter(block => block.trim().length > 0);
     }
 
+    // ГЕНЕРАЦИЯ КАРТОЧКИ ИЗ БЛОКА
     generateCardFromBlock(block) {
-        let cleanBlock = block.trim();
+        const cleanBlock = block.trim();
         
-        // Убираем "Что такое" если уже есть
-        if (cleanBlock.toLowerCase().startsWith('что такое')) {
-            cleanBlock = cleanBlock.substring(9).trim();
-        }
+        // ПОИСК ОСНОВНОГО ТЕРМИНА И ОПРЕДЕЛЕНИЯ
+        let mainTerm = '';
+        let definition = '';
         
-        let question, answer;
-        
-        // ТИП 1: Определение "Термин - это объяснение"
-        if (cleanBlock.includes(' - это ') || cleanBlock.includes(' – это ')) {
-            const parts = cleanBlock.split(/ - это | – это /);
-            if (parts.length >= 2) {
-                const term = this.cleanTerm(parts[0]);
-                question = `Что такое ${term}?`;
-                answer = cleanBlock;
-            }
-        }
-        // ТИП 2: Определение "Термин это объяснение" 
-        else if (cleanBlock.includes(' это ')) {
-            const parts = cleanBlock.split(' это ');
-            if (parts.length >= 2) {
-                const term = this.cleanTerm(parts[0]);
-                question = `Что такое ${term}?`;
-                answer = cleanBlock;
-            }
-        }
-        // ТИП 3: Определение через тире "Термин - объяснение"
-        else if (cleanBlock.match(/[а-яё]+\s*[-–]\s*[а-яё]/i)) {
-            const parts = cleanBlock.split(/[-–]/);
-            if (parts.length >= 2) {
-                const term = this.cleanTerm(parts[0]);
-                question = `Что такое ${term}?`;
-                answer = cleanBlock;
-            }
-        }
-        // ТИП 4: Нумерованный список "1. Термин: объяснение"
-        else if (cleanBlock.match(/^\d+[\.\)]\s/)) {
-            const termMatch = cleanBlock.match(/^\d+[\.\)]\s*(.+?)(?::|$)/);
-            if (termMatch) {
-                const term = this.cleanTerm(termMatch[1]);
-                question = `Что такое ${term}?`;
-                answer = cleanBlock;
-            }
+        // Паттерн 1: "Термин - это определение"
+        const pattern1 = cleanBlock.match(/^(.+?)\s*[-–]\s*это\s*(.+)$/i);
+        if (pattern1) {
+            mainTerm = this.cleanTerm(pattern1[1]);
+            definition = pattern1[2];
         }
         
-        // ТИП 5: Обычное предложение - извлекаем главный термин
-        if (!question) {
-            const keyTerm = this.extractKeyTerm(cleanBlock);
-            question = `Что такое ${keyTerm}?`;
-            answer = cleanBlock;
+        // Паттерн 2: "Термин это определение" 
+        const pattern2 = cleanBlock.match(/^(.+?)\s+это\s+(.+)$/i);
+        if (pattern2 && !mainTerm) {
+            mainTerm = this.cleanTerm(pattern2[1]);
+            definition = pattern2[2];
         }
         
-        // Убедимся, что ответ не слишком длинный
-        if (answer.length > 400) {
-            answer = answer.substring(0, 400) + '...';
+        // Паттерн 3: "Термин - определение" (без "это")
+        const pattern3 = cleanBlock.match(/^(.+?)\s*[-–]\s*(.+)$/);
+        if (pattern3 && !mainTerm) {
+            mainTerm = this.cleanTerm(pattern3[1]);
+            definition = pattern3[2];
         }
         
-        return { question, answer };
+        // Паттерн 4: "Термин: определение"
+        const pattern4 = cleanBlock.match(/^(.+?):\s*(.+)$/);
+        if (pattern4 && !mainTerm) {
+            mainTerm = this.cleanTerm(pattern4[1]);
+            definition = pattern4[2];
+        }
+        
+        // Если нашли структуру "термин - определение"
+        if (mainTerm && definition) {
+            return {
+                question: `Что такое ${mainTerm}?`,
+                answer: `${mainTerm} - это ${definition}`
+            };
+        }
+        
+        // ЕСЛИ НЕ НАШЛИ СТРУКТУРУ - ИЗВЛЕКАЕМ КЛЮЧЕВОЙ ТЕРМИН
+        const keyTerm = this.extractKeyTerm(cleanBlock);
+        return {
+            question: `Что такое ${keyTerm}?`,
+            answer: cleanBlock
+        };
     }
 
+    // ОЧИСТКА ТЕРМИНА
     cleanTerm(term) {
-        return term.trim()
-            .replace(/[.,:;!?]$/, '')
-            .replace(/^(\d+[\.\)]\s*)/, '') // Убираем нумерацию
-            .replace(/\s+/g, ' ');
+        return term
+            .replace(/^[^a-яё]*|[^a-яё]*$/gi, '') // Убираем не-буквы в начале/конце
+            .replace(/\d+[\.\)]\s*/, '') // Убираем нумерацию "1." "23)"
+            .replace(/\s+/g, ' ')
+            .trim();
     }
 
+    // ИЗВЛЕЧЕНИЕ КЛЮЧЕВОГО ТЕРМИНА ИЗ ТЕКСТА
     extractKeyTerm(text) {
-        const words = text.split(' ').filter(word => {
-            const cleanWord = word.replace(/[.,!?;:]$/, '');
-            return cleanWord.length > 2 && 
-                   !['это', 'что', 'как', 'для', 'при', 'из', 'от', 'на', 'в', 'с', 'по', 'у'].includes(cleanWord.toLowerCase());
-        });
+        const words = text.split(' ')
+            .filter(word => {
+                const clean = word.replace(/[^a-яё]/gi, '');
+                return clean.length > 3 && 
+                       !this.isStopWord(clean.toLowerCase());
+            });
         
-        if (words.length === 0) return 'понятие';
+        if (words.length === 0) return 'основное понятие';
         
-        // Пробуем разные комбинации терминов
-        const candidates = [
-            words[0],
-            words.slice(0, 2).join(' '),
-            words.slice(0, 3).join(' ')
-        ];
+        // Ищем самые информативные слова (первые не-стоп слова)
+        const informativeWords = [];
+        const allWords = text.split(' ');
         
-        // Выбираем самую подходящую комбинацию
-        for (let candidate of candidates) {
-            const cleanCandidate = this.cleanTerm(candidate);
-            if (cleanCandidate.length >= 3 && cleanCandidate.length <= 30) {
-                return cleanCandidate;
+        for (let word of allWords) {
+            const clean = this.cleanTerm(word);
+            if (clean.length > 3 && !this.isStopWord(clean.toLowerCase())) {
+                informativeWords.push(clean);
+                if (informativeWords.length >= 2) break;
             }
         }
         
-        return this.cleanTerm(words[0]);
+        return informativeWords.length > 0 ? informativeWords.join(' ') : words[0];
+    }
+
+    // СПИСОК СТОП-СЛОВ
+    isStopWord(word) {
+        const stopWords = [
+            'это', 'что', 'как', 'для', 'при', 'из', 'от', 'на', 'в', 'с', 'по', 'у',
+            'о', 'за', 'до', 'не', 'но', 'или', 'и', 'да', 'нет', 'если', 'то',
+            'так', 'же', 'бы', 'вот', 'там', 'тут', 'здесь', 'там', 'где', 'когда',
+            'потому', 'поэтому', 'чтобы', 'который', 'какой', 'чей', 'сколько'
+        ];
+        return stopWords.includes(word);
     }
 
     displayGeneratedCards() {
         const cardsList = document.getElementById('cardsList');
         const cardsContainer = document.getElementById('cardsContainer');
         
-        if (!cardsList || !cardsContainer) {
-            console.error('Элементы cardsList или cardsContainer не найдены!');
-            return;
-        }
+        if (!cardsList || !cardsContainer) return;
         
         cardsList.innerHTML = '';
         
-        this.cards.forEach((card, index) => {
+        this.cards.forEach((card) => {
             const cardElement = document.createElement('div');
             cardElement.className = 'card';
             cardElement.innerHTML = `
@@ -356,9 +346,7 @@ class MemoryApp {
     }
 }
 
-// Запуск приложения после полной загрузки DOM
+// Запуск приложения
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM полностью загружен, запуск приложения...');
-    const app = new MemoryApp();
-    app.init();
+    new MemoryApp().init();
 });
