@@ -1,5 +1,4 @@
-// manual.js - ФИКСИРОВАННАЯ ВЕРСИЯ
-// Исправлена генерация вопросов и пути к иконкам
+// manual.js - ФИНАЛЬНЫЙ РАБОЧИЙ ВАРИАНТ
 
 class MemoryCard {
     constructor(question, answer, category = 'general') {
@@ -14,12 +13,13 @@ class MemoryCard {
     cleanQuestion(question) {
         // Убираем дублирование "Что такое"
         if (question.startsWith('Что такое Что такое')) {
-            return question.replace('Что такое Что такое', 'Что такое');
+            question = question.replace('Что такое Что такое', 'Что такое');
         }
-        if (question.startsWith('Что такое ')) {
-            return question;
+        // Убедимся, что вопрос заканчивается знаком вопроса
+        if (!question.endsWith('?')) {
+            question = question + '?';
         }
-        return 'Что такое ' + question;
+        return question;
     }
 }
 
@@ -38,54 +38,101 @@ class MemoryApp {
     }
 
     bindEvents() {
-        // Исправленные пути к иконкам
         document.getElementById('showAnswerBtn').addEventListener('click', () => this.showAnswer());
         document.getElementById('nextCardBtn').addEventListener('click', () => this.nextCard());
         document.getElementById('addCardBtn').addEventListener('click', () => this.showAddCardForm());
         document.getElementById('saveCardBtn').addEventListener('click', () => this.saveCard());
         document.getElementById('cancelCardBtn').addEventListener('click', () => this.hideAddCardForm());
         document.getElementById('generateCardBtn').addEventListener('click', () => this.generateCard());
+        document.getElementById('saveGeneratedCardBtn').addEventListener('click', () => this.saveGeneratedCard());
         document.getElementById('exportBtn').addEventListener('click', () => this.exportCards());
         document.getElementById('importBtn').addEventListener('click', () => this.importCards());
         document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileImport(e));
     }
 
-    // ФИКСИРОВАННАЯ ГЕНЕРАЦИЯ ВОПРОСОВ
+    // ФИКСИРОВАННАЯ ГЕНЕРАЦИЯ ПОЛНЫХ И КОРРЕКТНЫХ ВОПРОСОВ
     generateQuestion(text) {
-        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
-        if (sentences.length === 0) return null;
-
-        const sentence = sentences[0].trim();
-        
-        // Умная генерация вопроса - убираем лишние "Что такое"
-        let question = sentence;
-        
-        // Если предложение уже содержит определение, используем его как есть
-        if (sentence.includes(' это ') || sentence.includes(' - ') || sentence.includes(' – ')) {
-            const parts = sentence.split(/ это | - | – /);
-            if (parts.length >= 2) {
-                question = `Что такое ${parts[0].trim()}?`;
-            }
-        } else {
-            // Иначе создаем обычный вопрос
-            question = `Что такое ${this.extractMainTerm(sentence)}?`;
+        // Находим первое законченное предложение
+        const sentenceMatch = text.match(/[^.!?]*[.!?]/);
+        if (!sentenceMatch) {
+            // Если нет точек, берем первые 7 слов
+            const words = text.split(' ').filter(w => w.trim().length > 0);
+            if (words.length === 0) return null;
+            
+            const term = words.slice(0, Math.min(4, words.length)).join(' ');
+            return `Что такое ${term}?`;
         }
         
-        return question;
+        let sentence = sentenceMatch[0].trim();
+        
+        // Убираем лишние пробелы и знаки препинания
+        sentence = sentence.replace(/\s+/g, ' ').replace(/[.,;:]$/, '');
+        
+        // Определяем тип предложения и генерируем соответствующий вопрос
+        if (sentence.includes(' это ') || sentence.includes(' - ') || sentence.includes(' – ')) {
+            // Для определительных предложений
+            const parts = sentence.split(/ это | - | – /);
+            if (parts.length >= 2 && parts[0].trim().length > 2) {
+                const term = parts[0].trim();
+                return `Что такое ${term}?`;
+            }
+        }
+        
+        // Для простых утвердительных предложений
+        const words = sentence.split(' ').filter(w => w.trim().length > 0);
+        if (words.length <= 5) {
+            // Короткое предложение - используем целиком
+            return `Что такое ${sentence}?`;
+        } else {
+            // Длинное предложение - берем ключевые слова
+            const keyWords = this.extractKeyWords(sentence);
+            return `Что такое ${keyWords}?`;
+        }
     }
 
-    extractMainTerm(sentence) {
-        // Извлекаем главный термин из предложения
+    extractKeyWords(sentence) {
         const words = sentence.split(' ');
-        if (words.length <= 5) return words[0];
+        const stopWords = ['и', 'в', 'на', 'с', 'по', 'для', 'о', 'от', 'до', 'из', 'у', 'без', 'под', 'над', 'при', 'после'];
         
-        // Ищем существительные в начале предложения
-        return words.slice(0, 3).join(' ');
+        // Фильтруем стоп-слова и берем значимые слова
+        const meaningfulWords = words.filter(word => {
+            const cleanWord = word.toLowerCase().replace(/[.,!?;:]$/, '');
+            return cleanWord.length > 2 && !stopWords.includes(cleanWord);
+        });
+        
+        // Берем 2-4 самых значимых слова
+        const keyWords = meaningfulWords.slice(0, 4);
+        
+        return keyWords.length > 0 ? keyWords.join(' ') : words.slice(0, 3).join(' ');
     }
 
     generateAnswer(text) {
+        // Находим все предложения
         const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 5);
-        return sentences.slice(0, 2).join('. ') + '.';
+        
+        if (sentences.length === 0) {
+            return text.length > 200 ? text.substring(0, 200) + '...' : text;
+        }
+        
+        // Берем первое предложение как основной ответ
+        let answer = sentences[0].trim();
+        
+        // Добавляем второе предложение если есть и если нужно
+        if (sentences.length > 1 && answer.length < 100) {
+            answer += '. ' + sentences[1].trim();
+        }
+        
+        // Убедимся, что ответ не слишком длинный
+        if (answer.length > 300) {
+            answer = answer.substring(0, 300) + '...';
+        }
+        
+        // Добавляем точку в конце если нет
+        if (!answer.endsWith('.') && !answer.endsWith('...')) {
+            answer += '.';
+        }
+        
+        return answer;
     }
 
     async generateCard() {
@@ -134,9 +181,10 @@ class MemoryApp {
         document.getElementById('generatedQuestion').value = '';
         document.getElementById('generatedAnswer').value = '';
         document.getElementById('cardPreview').style.display = 'none';
+        
+        alert('Карточка успешно сохранена!');
     }
 
-    // Остальные методы остаются без изменений...
     showCard(index = null) {
         if (this.cards.length === 0) {
             this.showEmptyState();
@@ -190,6 +238,7 @@ class MemoryApp {
 
     showAddCardForm() {
         document.getElementById('addCardModal').style.display = 'block';
+        document.getElementById('textInput').focus();
     }
 
     hideAddCardForm() {
@@ -215,6 +264,8 @@ class MemoryApp {
         this.hideAddCardForm();
         this.showCard(this.cards.length - 1);
         this.updateStats();
+        
+        alert('Карточка успешно сохранена!');
     }
 
     updateStats() {
@@ -254,6 +305,11 @@ class MemoryApp {
     }
 
     exportCards() {
+        if (this.cards.length === 0) {
+            alert('Нет карточек для экспорта');
+            return;
+        }
+
         const data = JSON.stringify(this.cards, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -282,9 +338,11 @@ class MemoryApp {
                     this.showCard();
                     this.updateStats();
                     alert(`Успешно импортировано ${importedCards.length} карточек`);
+                } else {
+                    alert('Неверный формат файла');
                 }
             } catch (error) {
-                alert('Ошибка при импорте файла');
+                alert('Ошибка при импорте файла: ' + error.message);
             }
         };
         reader.readAsText(file);
