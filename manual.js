@@ -1,4 +1,4 @@
-// manual.js - ФИНАЛЬНЫЙ РАБОЧИЙ КОД
+// manual.js - ФИНАЛЬНЫЙ ИСПРАВЛЕННЫЙ КОД
 
 class MemoryCard {
     constructor(question, answer) {
@@ -80,7 +80,7 @@ class MemoryApp {
         // СОЗДАЕМ КАЧЕСТВЕННЫЕ КАРТОЧКИ
         blocks.forEach(block => {
             if (block.term && block.definition) {
-                const question = `Что такое ${block.term}?`;
+                const question = this.createQualityQuestion(block.term);
                 const answer = block.definition;
                 this.cards.push(new MemoryCard(question, answer));
             }
@@ -89,6 +89,29 @@ class MemoryApp {
         this.saveCards();
         this.displayGeneratedCards();
         alert(`Сгенерировано ${this.cards.length} карточек!`);
+    }
+
+    // СОЗДАНИЕ КАЧЕСТВЕННОГО ВОПРОСА
+    createQualityQuestion(term) {
+        // Убираем "Что такое" если уже есть в термине
+        let cleanTerm = term.replace(/^Что такое\s+/i, '').trim();
+        
+        // Добавляем разные варианты вопросов для разнообразия
+        const questionTypes = [
+            `Что такое ${cleanTerm}?`,
+            `Дайте определение ${cleanTerm}`,
+            `Объясните понятие "${cleanTerm}"`,
+            `Что означает термин "${cleanTerm}"?`,
+            `Опишите ${cleanTerm}`
+        ];
+        
+        // Выбираем случайный тип вопроса (но первый чаще)
+        const random = Math.random();
+        if (random < 0.6) {
+            return questionTypes[0]; // "Что такое..." - чаще
+        } else {
+            return questionTypes[Math.floor(Math.random() * (questionTypes.length - 1)) + 1];
+        }
     }
 
     // ПАРСИНГ СТРУКТУРИРОВАННОГО ТЕКСТА
@@ -117,6 +140,8 @@ class MemoryApp {
                         term: currentTerm,
                         definition: currentDefinition
                     });
+                    currentTerm = '';
+                    currentDefinition = '';
                 }
                 
                 // Разбираем новую строку с определением
@@ -133,6 +158,8 @@ class MemoryApp {
                         term: currentTerm,
                         definition: currentDefinition
                     });
+                    currentTerm = '';
+                    currentDefinition = '';
                 }
                 
                 const parsed = this.parseNumberedLine(line);
@@ -142,19 +169,25 @@ class MemoryApp {
                 }
             }
             // Обрабатываем примеры и дополнительные пояснения
-            else if (line.startsWith('Например,') || line.startsWith('Если')) {
-                // Добавляем к текущему определению
+            else if (line.startsWith('Например,') || line.startsWith('Если') || 
+                     line.startsWith('С её') || line.startsWith('Она')) {
+                // Добавляем к текущему определению как продолжение
                 if (currentDefinition) {
                     currentDefinition += ' ' + line;
+                } else if (currentTerm) {
+                    // Если есть термин но нет определения, создаем определение
+                    currentDefinition = line;
                 }
             }
             // Обычный текст - пробуем извлечь термин и определение
-            else if (line.length > 20) {
+            else if (line.length > 15) {
                 if (currentTerm && currentDefinition) {
                     blocks.push({
                         term: currentTerm,
                         definition: currentDefinition
                     });
+                    currentTerm = '';
+                    currentDefinition = '';
                 }
                 
                 const parsed = this.extractFromPlainText(line);
@@ -252,7 +285,7 @@ class MemoryApp {
     extractMainTerm(text) {
         const words = text.split(' ').filter(word => {
             const clean = word.replace(/[^a-яё]/gi, '');
-            return clean.length > 3;
+            return clean.length > 3 && !this.isStopWord(clean.toLowerCase());
         });
         
         if (words.length >= 2) {
@@ -260,6 +293,18 @@ class MemoryApp {
         }
         
         return words[0] || 'основное понятие';
+    }
+
+    // СПИСОК СТОП-СЛОВ
+    isStopWord(word) {
+        const stopWords = [
+            'это', 'что', 'как', 'для', 'при', 'из', 'от', 'на', 'в', 'с', 'по', 'у',
+            'о', 'за', 'до', 'не', 'но', 'или', 'и', 'да', 'нет', 'если', 'то',
+            'так', 'же', 'бы', 'вот', 'там', 'тут', 'здесь', 'там', 'где', 'когда',
+            'потому', 'поэтому', 'чтобы', 'который', 'какой', 'чей', 'сколько',
+            'она', 'они', 'его', 'её', 'их', 'ему', 'ей', 'им'
+        ];
+        return stopWords.includes(word);
     }
 
     // ОЧИСТКА ТЕРМИНА
