@@ -1,4 +1,4 @@
-// manual.js - ИСПРАВЛЕННАЯ ЛОГИКА ТЕРМИНОВ
+// manual.js - ФИНАЛЬНЫЙ РАБОЧИЙ КОД
 
 class MemoryCard {
     constructor(question, answer) {
@@ -130,66 +130,52 @@ class MemoryApp {
         return cards;
     }
 
-    // ИСПРАВЛЕННОЕ ИЗВЛЕЧЕНИЕ ГЛАВНОГО ТЕРМИНА
+    // ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ - ИЗВЛЕЧЕНИЕ ТЕРМИНОВ
     extractMainTerm(text) {
-        // Убираем "Что такое" если уже есть
         let cleanText = text.replace(/^Что такое\s+/i, '').trim();
         
-        // Ищем ОСНОВНОЙ ТЕРМИН в тексте
+        // УБИРАЕМ ВСЕ СТОП-СЛОВА В НАЧАЛЕ ПРЕДЛОЖЕНИЯ
         const words = cleanText.split(' ');
         
-        // СЛУЧАЙ 1: Если текст начинается с термина (например: "Формулировка теоремы Фалеса:")
-        if (cleanText.match(/^[А-ЯЁ][а-яё]+\s+[А-ЯЁ][а-яё]+/)) {
-            // Берем первые 2-3 слова как термин
-            const potentialTerm = words.slice(0, Math.min(3, words.length)).join(' ');
-            if (potentialTerm.length > 5 && potentialTerm.length < 40) {
-                return this.cleanTerm(potentialTerm);
+        // Находим ПЕРВОЕ значимое слово (игнорируя предлоги, местоимения и т.д.)
+        let startIndex = 0;
+        for (let i = 0; i < words.length; i++) {
+            const word = words[i].toLowerCase().replace(/[^a-яё]/g, '');
+            if (word.length >= 4 && !this.isStopWord(word)) {
+                startIndex = i;
+                break;
             }
         }
         
-        // СЛУЧАЙ 2: Ищем существительные в тексте (слова с большой буквы или длинные слова)
-        const nouns = words.filter(word => {
-            const cleanWord = word.replace(/[^a-яё]/gi, '');
-            // Ищем слова с большой буквы ИЛИ длинные слова (>= 6 букв)
-            return (word[0] === word[0].toUpperCase() && word[0] !== word[0].toLowerCase()) ||
-                   cleanWord.length >= 6;
-        }).filter(word => !this.isStopWord(word.toLowerCase()));
+        // Берем 2-3 слова НАЧИНАЯ С ПЕРВОГО ЗНАЧИМОГО
+        const meaningfulWords = words.slice(startIndex);
         
-        if (nouns.length > 0) {
-            // Берем первое подходящее существительное
-            return this.cleanTerm(nouns[0]);
+        if (meaningfulWords.length >= 3) {
+            // Пробуем комбинации: 2 слова, 3 слова
+            const candidate2 = meaningfulWords.slice(0, 2).join(' ');
+            const candidate3 = meaningfulWords.slice(0, 3).join(' ');
+            
+            // Выбираем лучшую комбинацию
+            if (candidate2.length >= 6 && candidate2.length <= 25) {
+                return this.cleanTerm(candidate2);
+            }
+            if (candidate3.length >= 6 && candidate3.length <= 30) {
+                return this.cleanTerm(candidate3);
+            }
         }
-        
-        // СЛУЧАЙ 3: Ищем самые длинные слова в тексте
-        const longWords = words
-            .map(word => ({ word, length: word.replace(/[^a-яё]/gi, '').length }))
-            .filter(item => item.length >= 5 && !this.isStopWord(item.word.toLowerCase()))
-            .sort((a, b) => b.length - a.length);
-        
-        if (longWords.length > 0) {
-            return this.cleanTerm(longWords[0].word);
-        }
-        
-        // СЛУЧАЙ 4: Берем первые 2 слова, исключая стоп-слова
-        const meaningfulWords = words.filter(word => {
-            const cleanWord = word.replace(/[^a-яё]/gi, '');
-            return cleanWord.length > 3 && !this.isStopWord(cleanWord.toLowerCase());
-        });
         
         if (meaningfulWords.length >= 2) {
-            return this.cleanTerm(meaningfulWords.slice(0, 2).join(' '));
+            const candidate = meaningfulWords.slice(0, 2).join(' ');
+            if (candidate.length >= 4) {
+                return this.cleanTerm(candidate);
+            }
         }
         
-        if (meaningfulWords.length === 1) {
+        if (meaningfulWords.length >= 1) {
             return this.cleanTerm(meaningfulWords[0]);
         }
         
-        // СЛУЧАЙ 5: Если ничего не нашли, берем первые 2 слова
-        if (words.length >= 2) {
-            return this.cleanTerm(words.slice(0, 2).join(' '));
-        }
-        
-        return words[0] ? this.cleanTerm(words[0]) : 'основное понятие';
+        return 'основное понятие';
     }
 
     // ОЧИСТКА ТЕРМИНА
@@ -204,21 +190,52 @@ class MemoryApp {
     // ОБНОВЛЕННЫЙ СПИСОК СТОП-СЛОВ
     isStopWord(word) {
         const stopWords = [
+            // Предлоги и союзы
             'это', 'что', 'как', 'для', 'при', 'из', 'от', 'на', 'в', 'с', 'по', 'у',
             'о', 'за', 'до', 'не', 'но', 'или', 'и', 'да', 'нет', 'если', 'то',
-            'так', 'же', 'бы', 'вот', 'там', 'тут', 'здесь', 'там', 'где', 'когда',
+            'так', 'же', 'бы', 'вот', 'там', 'тут', 'здесь', 'где', 'когда',
             'потому', 'поэтому', 'чтобы', 'который', 'какой', 'чей', 'сколько',
-            'она', 'они', 'его', 'её', 'их', 'ему', 'ей', 'им', 
-            'если', 'то', 'они', 'она', 'оно', 'они', 'его', 'её', 'их',
-            'все', 'всё', 'весь', 'вся', 'всё', 'всех', 'всем', 'всеми',
+            
+            // Местоимения
+            'она', 'они', 'его', 'её', 'их', 'ему', 'ей', 'им', 'оно', 
+            'все', 'всё', 'весь', 'вся', 'всех', 'всем', 'всеми',
             'кто', 'чего', 'чем', 'ком', 'чём', 'том', 'тем', 'та', 'те',
             'мой', 'твой', 'свой', 'наш', 'ваш', 'ихний',
-            'формулировка', 'определение', 'понятие', 'теория', 'закон'
+            
+            // Служебные слова для определений
+            'формулировка', 'определение', 'понятие', 'теория', 'закон',
+            'теорема', 'аксиома', 'лемма', 'свойство', 'признак',
+            
+            // Короткие неинформативные слова
+            'есть', 'быть', 'стать', 'можно', 'нужно', 'должен',
+            'может', 'должно', 'следует', 'следуют', 'является',
+            
+            // Другие неинформативные слова
+            'очень', 'просто', 'точно', 'верно', 'правильно', 'неправильно',
+            'хорошо', 'плохо', 'больше', 'меньше', 'сильно', 'слабо',
+            
+            // Временные и количественные
+            'время', 'раз', 'два', 'три', 'первый', 'второй', 'третий',
+            'много', 'мало', 'несколько', 'каждый', 'любой', 'весь',
+            
+            // Вопросительные
+            'кто', 'что', 'какой', 'каков', 'чей', 'который', 'сколько',
+            
+            // Указательные  
+            'этот', 'тот', 'такой', 'таков', 'столько', 'сей',
+            
+            // Отрицательные
+            'никто', 'ничто', 'никакой', 'ничей', 'никоторый', 'нисколько',
+            
+            // Неопределенные
+            'некто', 'нечто', 'некий', 'некоторый', 'несколько', 'кое-кто',
+            
+            // Притяжательные
+            'мой', 'твой', 'свой', 'наш', 'ваш', 'его', 'её', 'их'
         ];
         return stopWords.includes(word);
     }
 
-    // ВСЕ ОСТАЛЬНЫЕ МЕТОДЫ БЕЗ ИЗМЕНЕНИЙ
     displayGeneratedCards() {
         const cardsList = document.getElementById('cardsList');
         const cardsContainer = document.getElementById('cardsContainer');
@@ -332,6 +349,6 @@ class MemoryApp {
 }
 
 // Запуск приложения
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () {
     new MemoryApp().init();
 });
