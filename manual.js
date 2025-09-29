@@ -1,4 +1,4 @@
-// manual.js - ПРОСТЕЙШИЙ РАБОЧИЙ КОД
+// manual.js - ФИНАЛЬНЫЙ РАБОЧИЙ КОД
 
 class MemoryCard {
     constructor(question, answer) {
@@ -69,50 +69,23 @@ class MemoryApp {
         
         this.cards = [];
         
-        // ПРОСТЕЙШАЯ ЛОГИКА: Ищем название темы в первой строке
-        const lines = text.split('\n').filter(line => line.trim().length > 0);
+        // Находим основную тему из текста
+        const mainTopic = this.findMainTopic(text);
         
-        let mainTopic = '';
-        
-        // Ищем тему в первой строке (содержит двоеточие или это короткая строка)
-        if (lines.length > 0) {
-            const firstLine = lines[0].trim();
-            if (firstLine.includes(':') || firstLine.split(' ').length <= 5) {
-                mainTopic = firstLine.replace(':', '').trim();
-            } else {
-                // Или берем первые 2-3 слова из первого предложения
-                const words = firstLine.split(' ').slice(0, 3);
-                mainTopic = words.join(' ');
-            }
-        }
-        
-        if (!mainTopic) {
-            mainTopic = 'основное понятие';
-        }
-        
-        // Разбиваем на предложения для создания карточек
-        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 15);
+        // Разбиваем на предложения
+        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
         
         if (sentences.length === 0) {
-            // Если не нашли предложений, создаем одну карточку
+            // Одна карточка если мало текста
             this.cards.push(new MemoryCard(
                 `Что такое ${mainTopic}?`,
                 text
             ));
         } else {
-            // Создаем карточки для каждого предложения
+            // Создаем осмысленные вопросы для каждого предложения
             sentences.forEach((sentence, index) => {
                 const cleanSentence = sentence.trim();
-                let question;
-                
-                if (index === 0) {
-                    // Первая карточка - основной вопрос
-                    question = `Что такое ${mainTopic}?`;
-                } else {
-                    // Остальные карточки - дополнительные вопросы
-                    question = `Дополнительная информация о ${mainTopic}`;
-                }
-                
+                const question = this.createContextQuestion(cleanSentence, mainTopic, index);
                 this.cards.push(new MemoryCard(question, cleanSentence));
             });
         }
@@ -120,6 +93,95 @@ class MemoryApp {
         this.saveCards();
         this.displayGeneratedCards();
         alert(`Сгенерировано ${this.cards.length} карточек!`);
+    }
+
+    // Находим основную тему текста
+    findMainTopic(text) {
+        const lines = text.split('\n').filter(line => line.trim().length > 0);
+        
+        // Ищем тему в первой строке (обычно там название)
+        if (lines.length > 0) {
+            const firstLine = lines[0].trim();
+            
+            // Если строка короткая или содержит двоеточие - это скорее всего тема
+            if (firstLine.includes(':') || firstLine.split(' ').length <= 6) {
+                let topic = firstLine.replace(':', '').trim();
+                
+                // Убираем слова "формулировка", "определение" и т.д.
+                topic = topic.replace(/(формулировка|определение|понятие|теория)\s+/gi, '');
+                return topic || 'основное понятие';
+            }
+        }
+        
+        // Ищем в первом предложении слова с большой буквы
+        const firstSentence = text.split(/[.!?]+/)[0];
+        const words = firstSentence.trim().split(' ');
+        
+        // Ищем слова с большой буквы (кроме первого)
+        for (let i = 1; i < words.length; i++) {
+            const word = words[i].replace(/[^a-яё]/gi, '');
+            if (word.length > 4 && words[i][0] === words[i][0].toUpperCase()) {
+                return word;
+            }
+        }
+        
+        // Или берем первые два значимых слова
+        const meaningfulWords = words.filter(word => {
+            const clean = word.replace(/[^a-яё]/gi, '');
+            return clean.length > 3;
+        });
+        
+        if (meaningfulWords.length >= 2) {
+            return meaningfulWords.slice(0, 2).join(' ');
+        }
+        
+        return 'основное понятие';
+    }
+
+    // Создаем осмысленные вопросы в контексте темы
+    createContextQuestion(sentence, mainTopic, index) {
+        const lowerSentence = sentence.toLowerCase();
+        
+        // Определяем тип предложения и создаем соответствующий вопрос
+        if (index === 0) {
+            // Первое предложение - основное определение
+            return `В чём состоит ${mainTopic}?`;
+        }
+        
+        if (lowerSentence.includes('ограничен') || lowerSentence.includes('нет ограничен')) {
+            return `Какие ограничения есть в ${mainTopic}?`;
+        }
+        
+        if (lowerSentence.includes('верна') || lowerSentence.includes('справедлива')) {
+            return `Для каких случаев верна ${mainTopic}?`;
+        }
+        
+        if (lowerSentence.includes('прямые') || lowerSentence.includes('отрезк')) {
+            return `Что происходит с прямыми и отрезками в ${mainTopic}?`;
+        }
+        
+        if (lowerSentence.includes('параллельн') || lowerSentence.includes('секущ')) {
+            return `Какую роль играют параллельные прямые в ${mainTopic}?`;
+        }
+        
+        if (lowerSentence.includes('равн') || lowerSentence.includes('одинаков')) {
+            return `Какие отрезки являются равными в ${mainTopic}?`;
+        }
+        
+        if (lowerSentence.includes('услов') || lowerSentence.includes('требован')) {
+            return `Какие условия должны выполняться в ${mainTopic}?`;
+        }
+        
+        // Стандартные вопросы в контексте темы
+        const contextQuestions = [
+            `Что ещё важно знать о ${mainTopic}?`,
+            `Какие дополнительные свойства у ${mainTopic}?`,
+            `Какие особенности имеет ${mainTopic}?`,
+            `Что уточняется в ${mainTopic}?`,
+            `Как применяется ${mainTopic}?`
+        ];
+        
+        return contextQuestions[index % contextQuestions.length];
     }
 
     displayGeneratedCards() {
