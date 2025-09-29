@@ -1,77 +1,66 @@
-// Простая и надежная генерация карточек
+// СУПЕР-ПРОСТАЯ ГЕНЕРАЦИЯ КАРТОЧЕК
 function generateFlashcards(text) {
-    if (!text || text.trim().length < 10) {
-        return [new SmartFlashcard(
-            "Введите текст для изучения", 
-            "Добавьте текст длиной от 10 символов для генерации карточек"
-        )];
+    console.log("=== НАЧАЛО ГЕНЕРАЦИИ ===");
+    console.log("Получен текст:", text);
+    
+    // Проверка на пустой текст
+    if (!text || text.trim().length < 5) {
+        console.log("Текст слишком короткий");
+        return [
+            new SmartFlashcard(
+                "Добавьте текст", 
+                "Введите текст для изучения (минимум 10 символов)"
+            )
+        ];
     }
     
-    console.log("Начало генерации карточек");
-    
-    // Простое разбиение на предложения
-    const sentences = text.split(/[.!?]+/).filter(s => {
-        const trimmed = s.trim();
-        return trimmed.length > 10 && trimmed.split(' ').length >= 3;
-    });
-    
-    console.log("Найдено предложений:", sentences.length);
+    // ПРОСТОЕ разбиение на предложения
+    const sentences = text.split(/[.!?]+/);
+    console.log("Разбито на предложений:", sentences.length);
     
     const flashcards = [];
     
-    // Проходим по каждому предложению
-    for (let i = 0; i < sentences.length && flashcards.length < 8; i++) {
+    // ПРОСТО берем каждое предложение и создаем карточку
+    for (let i = 0; i < sentences.length; i++) {
         const sentence = sentences[i].trim();
-        if (!sentence) continue;
         
-        // Создаем карточку для каждого предложения
-        const card = createCardFromSentence(sentence);
-        if (card) {
-            flashcards.push(card);
+        // Пропускаем пустые и очень короткие предложения
+        if (!sentence || sentence.length < 10) {
+            continue;
         }
+        
+        console.log("Обрабатываем предложение:", sentence.substring(0, 50));
+        
+        // ПРОСТОЙ вопрос - берем первые 3 слова
+        const words = sentence.split(' ').filter(word => word.length > 0);
+        if (words.length < 3) continue;
+        
+        const mainWords = words.slice(0, 3).join(' ');
+        const question = `Объясните: ${mainWords}`;
+        
+        // Создаем карточку
+        const card = new SmartFlashcard(question, sentence);
+        flashcards.push(card);
+        console.log("Создана карточка:", question);
+        
+        // Ограничиваем количество карточек
+        if (flashcards.length >= 6) break;
     }
     
-    console.log("Сгенерировано карточек:", flashcards.length);
+    console.log("=== ЗАВЕРШЕНО ===");
+    console.log("Итоговое количество карточек:", flashcards.length);
     
-    // Если ничего не сгенерировалось, создаем хотя бы одну карточку
+    // Если вообще ничего не создалось - создаем одну общую карточку
     if (flashcards.length === 0) {
-        flashcards.push(new SmartFlashcard(
-            "Основная идея текста",
-            text.substring(0, 100) + (text.length > 100 ? '...' : '')
-        ));
+        console.log("Создаем резервную карточку");
+        const firstWords = text.split(' ').slice(0, 4).join(' ');
+        flashcards.push(
+            new SmartFlashcard(
+                `Тема: ${firstWords}`,
+                text.substring(0, 150) + (text.length > 150 ? '...' : '')
+            )
+        );
     }
     
     return flashcards;
-}
-
-// Создание одной карточки из предложения
-function createCardFromSentence(sentence) {
-    // Очищаем предложение от мусора
-    let cleaned = sentence
-        .replace(/^\d+\.?\s*/, '') // Удаляем "1. ", "2. "
-        .replace(/^[-•]\s*/, '')   // Удаляем маркеры списка
-        .replace(/Содержимое ответа/g, '') // Удаляем мусор
-        .trim();
-    
-    // Если предложение слишком короткое после очистки, пропускаем
-    if (cleaned.length < 15 || cleaned.split(' ').length < 3) {
-        return null;
-    }
-    
-    // Извлекаем основное понятие (первые 2-3 значимых слова)
-    const words = cleaned.split(' ').filter(word => 
-        word.length > 2 && 
-        !['это', 'также', 'которые', 'который', 'например'].includes(word.toLowerCase())
-    );
-    
-    if (words.length < 2) {
-        return null;
-    }
-    
-    const mainConcept = words.slice(0, 2).join(' ');
-    
-    // Создаем вопрос БЕЗ "Что такое"
-    const question = `Объясните: ${mainConcept}`;
-    
-    return new SmartFlashcard(question, cleaned);
 }
