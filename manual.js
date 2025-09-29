@@ -1,4 +1,4 @@
-// manual.js - ФИНАЛЬНЫЙ ИСПРАВЛЕННЫЙ КОД
+// manual.js - УНИВЕРСАЛЬНЫЙ КОД ДЛЯ ЛЮБЫХ ТЕМ
 
 class MemoryCard {
     constructor(question, answer) {
@@ -95,7 +95,7 @@ class MemoryApp {
         alert(`Сгенерировано ${this.cards.length} карточек!`);
     }
 
-    // Находим основную тему текста - ИСПРАВЛЕННАЯ ВЕРСИЯ
+    // Находим основную тему текста - УНИВЕРСАЛЬНАЯ ВЕРСИЯ
     findMainTopic(text) {
         const lines = text.split('\n').filter(line => line.trim().length > 0);
         
@@ -103,14 +103,15 @@ class MemoryApp {
         if (lines.length > 0) {
             const firstLine = lines[0].trim();
             
-            // Убираем служебные слова: формулировка, определение и т.д.
+            // Убираем служебные слова
             let cleanLine = firstLine
-                .replace(/(формулировка|определение|понятие|теория|закон|принцип|правило)\s+/gi, '')
-                .replace(':', '')
+                .replace(/(формулировка|определение|понятие|теория|закон|принцип|правило|сущность|основа)\s+/gi, '')
+                .replace(/[.:]/g, '')
                 .trim();
             
-            // Если после очистки остался осмысленный текст
-            if (cleanLine.split(' ').length <= 6 && cleanLine.length > 3) {
+            // Если после очистки остался осмысленный текст (2-6 слов)
+            const wordCount = cleanLine.split(' ').length;
+            if (wordCount >= 1 && wordCount <= 6 && cleanLine.length > 3) {
                 return cleanLine;
             }
         }
@@ -123,11 +124,10 @@ class MemoryApp {
         
         const words = cleanSentence.split(' ');
         
-        // Ищем слова с большой буквы (кроме первого, если это служебное)
+        // Ищем слова с большой буквы (термины)
         for (let i = 0; i < words.length; i++) {
             const word = words[i].replace(/[^a-яё]/gi, '');
             if (word.length > 4 && words[i][0] === words[i][0].toUpperCase()) {
-                // Проверяем, не служебное ли это слово
                 if (!this.isServiceWord(word.toLowerCase())) {
                     return word;
                 }
@@ -148,6 +148,11 @@ class MemoryApp {
             return meaningfulWords[0];
         }
         
+        // Последний вариант - первые два слова
+        if (words.length >= 2) {
+            return words.slice(0, 2).join(' ');
+        }
+        
         return 'основное понятие';
     }
 
@@ -156,12 +161,13 @@ class MemoryApp {
         const serviceWords = [
             'формулировка', 'определение', 'понятие', 'теория', 'закон',
             'принцип', 'правило', 'теорема', 'аксиома', 'лемма', 
-            'свойство', 'признак', 'явление', 'процесс', 'явление'
+            'свойство', 'признак', 'явление', 'процесс', 'явление',
+            'сущность', 'основа', 'смысл', 'значение', 'роль'
         ];
         return serviceWords.includes(word);
     }
 
-    // Создаем осмысленные вопросы в контексте темы
+    // Создаем осмысленные вопросы в контексте темы - УНИВЕРСАЛЬНАЯ ВЕРСИЯ
     createContextQuestion(sentence, mainTopic, index) {
         const lowerSentence = sentence.toLowerCase();
         
@@ -172,36 +178,51 @@ class MemoryApp {
         }
         
         if (lowerSentence.includes('ограничен') || lowerSentence.includes('нет ограничен')) {
-            return `Какие ограничения есть в ${mainTopic}?`;
+            return `Какие ограничения имеет ${mainTopic}?`;
         }
         
-        if (lowerSentence.includes('верна') || lowerSentence.includes('справедлива')) {
-            return `Для каких случаев верна ${mainTopic}?`;
-        }
-        
-        if (lowerSentence.includes('прямые') || lowerSentence.includes('отрезк')) {
-            return `Что происходит с прямыми и отрезками в ${mainTopic}?`;
-        }
-        
-        if (lowerSentence.includes('параллельн') || lowerSentence.includes('секущ')) {
-            return `Какую роль играют параллельные прямые в ${mainTopic}?`;
-        }
-        
-        if (lowerSentence.includes('равн') || lowerSentence.includes('одинаков')) {
-            return `Какие отрезки являются равными в ${mainTopic}?`;
+        if (lowerSentence.includes('верна') || lowerSentence.includes('справедлива') || 
+            lowerSentence.includes('действует') || lowerSentence.includes('применима')) {
+            return `Для каких случаев применима ${mainTopic}?`;
         }
         
         if (lowerSentence.includes('услов') || lowerSentence.includes('требован')) {
-            return `Какие условия должны выполняться в ${mainTopic}?`;
+            return `Какие условия должны выполняться для ${mainTopic}?`;
+        }
+        
+        if (lowerSentence.includes('пример') || lowerSentence.includes('например')) {
+            return `Приведите пример ${mainTopic}`;
+        }
+        
+        if (lowerSentence.includes('значен') || lowerSentence.includes('важн')) {
+            return `Какое значение имеет ${mainTopic}?`;
+        }
+        
+        if (lowerSentence.includes('свойств') || lowerSentence.includes('особенност')) {
+            return `Какие свойства имеет ${mainTopic}?`;
+        }
+        
+        if (lowerSentence.includes('применен') || lowerSentence.includes('использ')) {
+            return `Где применяется ${mainTopic}?`;
+        }
+        
+        if (lowerSentence.includes('виды') || lowerSentence.includes('типы') || lowerSentence.includes('классификац')) {
+            return `Какие виды ${mainTopic} существуют?`;
+        }
+        
+        if (lowerSentence.includes('функц') || lowerSentence.includes('роль')) {
+            return `Какую функцию выполняет ${mainTopic}?`;
         }
         
         // Стандартные вопросы в контексте темы
         const contextQuestions = [
             `Что ещё важно знать о ${mainTopic}?`,
-            `Какие дополнительные свойства у ${mainTopic}?`,
+            `Какие дополнительные свойства имеет ${mainTopic}?`,
             `Какие особенности имеет ${mainTopic}?`,
             `Что уточняется в ${mainTopic}?`,
-            `Как применяется ${mainTopic}?`
+            `Как работает ${mainTopic}?`,
+            `В чём особенность ${mainTopic}?`,
+            `Какие характеристики у ${mainTopic}?`
         ];
         
         return contextQuestions[index % contextQuestions.length];
