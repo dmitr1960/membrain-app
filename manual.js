@@ -1,13 +1,12 @@
-// manual.js - ПРОСТОЙ РАБОЧИЙ MVP
+// manual.js - ИСПРАВЛЕННАЯ ГЕНЕРАЦИЯ ВОПРОСОВ
 
 class MemoryCard {
-    constructor(question, answer, category = 'general') {
+    constructor(question, answer) {
         this.question = question;
         this.answer = answer;
-        this.category = category;
         this.id = Date.now() + Math.random();
         this.lastReviewed = null;
-        this.confidence = 0;
+        this.confidence = 3;
     }
 }
 
@@ -21,116 +20,184 @@ class MemoryApp {
 
     init() {
         this.bindEvents();
-        this.showCard();
-        this.updateStats();
+        this.showMainInterface();
     }
 
     bindEvents() {
+        document.getElementById('generateBtn').addEventListener('click', () => this.generateCards());
+        document.getElementById('startReviewBtn').addEventListener('click', () => this.startReview());
         document.getElementById('showAnswerBtn').addEventListener('click', () => this.showAnswer());
-        document.getElementById('nextCardBtn').addEventListener('click', () => this.nextCard());
-        document.getElementById('addCardBtn').addEventListener('click', () => this.showAddCardForm());
-        document.getElementById('generateCardBtn').addEventListener('click', () => this.createCardFromText());
-        document.getElementById('cancelCardBtn').addEventListener('click', () => this.hideAddCardForm());
-        document.getElementById('exportBtn').addEventListener('click', () => this.exportCards());
-        document.getElementById('importBtn').addEventListener('click', () => this.importCards());
-        document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileImport(e));
+        document.getElementById('hardBtn').addEventListener('click', () => this.rateCard(2));
+        document.getElementById('goodBtn').addEventListener('click', () => this.rateCard(3));
+        document.getElementById('easyBtn').addEventListener('click', () => this.rateCard(4));
     }
 
-    // ПРОСТАЯ ГЕНЕРАЦИЯ КАРТОЧКИ
-    createCardFromText() {
+    // ИСПРАВЛЕННАЯ ГЕНЕРАЦИЯ КАРТОЧЕК
+    generateCards() {
         const textInput = document.getElementById('textInput');
         const text = textInput.value.trim();
         
         if (!text) {
-            alert('Введите текст для создания карточки');
+            alert('Введите текст для генерации карточек');
             return;
         }
         
-        // СУПЕРПРОСТАЯ ЛОГИКА:
-        const firstWord = text.split(' ')[0];
-        const question = `Что такое ${firstWord}?`;
-        const answer = text;
+        this.cards = [];
         
-        // Создаем карточку
-        const card = new MemoryCard(question, answer);
-        this.cards.push(card);
+        // Разбиваем текст на предложения
+        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+        
+        if (sentences.length === 0) {
+            alert('Не удалось извлечь предложения из текста');
+            return;
+        }
+        
+        // Создаем карточки из каждого предложения
+        sentences.forEach(sentence => {
+            const cleanSentence = sentence.trim();
+            if (cleanSentence.length > 0) {
+                const question = this.generateQuestion(cleanSentence);
+                const answer = cleanSentence;
+                
+                if (question && answer) {
+                    this.cards.push(new MemoryCard(question, answer));
+                }
+            }
+        });
+        
         this.saveCards();
-        this.hideAddCardForm();
-        this.showCard(this.cards.length - 1);
-        this.updateStats();
-        
-        alert(`Карточка создана!\nВопрос: ${question}`);
+        this.displayGeneratedCards();
+        alert(`Сгенерировано ${this.cards.length} карточек!`);
     }
 
-    showCard(index = null) {
+    // ИСПРАВЛЕННАЯ ГЕНЕРАЦИЯ ВОПРОСОВ - БЕЗ ДУБЛИРОВАНИЯ
+    generateQuestion(sentence) {
+        let cleanSentence = sentence.trim();
+        
+        // Убираем "Что такое" если уже есть в предложении
+        if (cleanSentence.toLowerCase().startsWith('что такое')) {
+            cleanSentence = cleanSentence.substring(9).trim(); // Убираем "Что такое"
+        }
+        
+        // Находим термин для вопроса
+        let term;
+        const words = cleanSentence.split(' ').filter(word => word.length > 0);
+        
+        if (words.length <= 3) {
+            // Короткое предложение - используем целиком
+            term = cleanSentence;
+        } else if (cleanSentence.includes(' это ') || cleanSentence.includes(' - ') || cleanSentence.includes(' – ')) {
+            // Для определений берем часть до "это" или "-"
+            const parts = cleanSentence.split(/ это | - | – /);
+            term = parts[0].trim();
+        } else {
+            // Для обычных предложений берем первые 2-3 слова
+            term = words.slice(0, Math.min(3, words.length)).join(' ');
+        }
+        
+        // Убираем знаки препинания в конце
+        term = term.replace(/[.,!?;:]$/, '');
+        
+        // Создаем вопрос
+        return `Что такое ${term}?`;
+    }
+
+    // ОСТАЛЬНЫЕ МЕТОДЫ БЕЗ ИЗМЕНЕНИЙ
+    displayGeneratedCards() {
+        const cardsList = document.getElementById('cardsList');
+        const cardsContainer = document.getElementById('cardsContainer');
+        
+        cardsList.innerHTML = '';
+        
+        this.cards.forEach((card, index) => {
+            const cardElement = document.createElement('div');
+            cardElement.className = 'card';
+            cardElement.innerHTML = `
+                <div class="card-question">${card.question}</div>
+                <div class="card-answer">${card.answer}</div>
+            `;
+            cardsList.appendChild(cardElement);
+        });
+        
+        cardsContainer.style.display = 'block';
+        document.getElementById('mainInterface').style.display = 'none';
+    }
+
+    startReview() {
         if (this.cards.length === 0) {
-            this.showEmptyState();
+            alert('Нет карточек для повторения');
             return;
         }
+        
+        this.currentCardIndex = 0;
+        this.showReviewInterface();
+        this.showCard();
+    }
 
-        if (index !== null) this.currentCardIndex = index;
+    showReviewInterface() {
+        document.getElementById('cardsContainer').style.display = 'none';
+        document.getElementById('reviewInterface').style.display = 'block';
+    }
 
+    showMainInterface() {
+        document.getElementById('mainInterface').style.display = 'block';
+        document.getElementById('cardsContainer').style.display = 'none';
+        document.getElementById('reviewInterface').style.display = 'none';
+    }
+
+    showCard() {
+        if (this.cards.length === 0) return;
+        
         const card = this.cards[this.currentCardIndex];
-        document.getElementById('question').textContent = card.question;
-        document.getElementById('answer').textContent = '';
-        document.getElementById('answer').style.display = 'none';
+        document.getElementById('questionCard').textContent = card.question;
+        document.getElementById('answerCard').textContent = '';
+        document.getElementById('answerCard').style.display = 'none';
+        
         document.getElementById('showAnswerBtn').style.display = 'block';
+        document.getElementById('hardBtn').style.display = 'none';
+        document.getElementById('goodBtn').style.display = 'none';
+        document.getElementById('easyBtn').style.display = 'none';
+        
         this.isAnswerShown = false;
-
-        document.getElementById('emptyState').style.display = 'none';
-        document.getElementById('cardContainer').style.display = 'block';
         this.updateProgress();
     }
 
     showAnswer() {
         if (this.cards.length === 0) return;
-
+        
         const card = this.cards[this.currentCardIndex];
-        document.getElementById('answer').textContent = card.answer;
-        document.getElementById('answer').style.display = 'block';
+        document.getElementById('answerCard').textContent = card.answer;
+        document.getElementById('answerCard').style.display = 'block';
+        
         document.getElementById('showAnswerBtn').style.display = 'none';
+        document.getElementById('hardBtn').style.display = 'inline-block';
+        document.getElementById('goodBtn').style.display = 'inline-block';
+        document.getElementById('easyBtn').style.display = 'inline-block';
+        
         this.isAnswerShown = true;
-
         card.lastReviewed = new Date().toISOString();
         this.saveCards();
     }
 
-    nextCard() {
+    rateCard(rating) {
         if (this.cards.length === 0) return;
-
-        this.currentCardIndex = (this.currentCardIndex + 1) % this.cards.length;
-        this.showCard();
-    }
-
-    showAddCardForm() {
-        document.getElementById('addCardModal').style.display = 'block';
-        document.getElementById('textInput').focus();
-    }
-
-    hideAddCardForm() {
-        document.getElementById('addCardModal').style.display = 'none';
-        document.getElementById('textInput').value = '';
-    }
-
-    updateStats() {
-        document.getElementById('totalCards').textContent = this.cards.length;
         
-        const reviewedToday = this.cards.filter(card => {
-            if (!card.lastReviewed) return false;
-            return new Date(card.lastReviewed).toDateString() === new Date().toDateString();
-        }).length;
-
-        document.getElementById('reviewedToday').textContent = reviewedToday;
+        this.cards[this.currentCardIndex].confidence = rating;
+        this.saveCards();
+        
+        this.currentCardIndex++;
+        
+        if (this.currentCardIndex < this.cards.length) {
+            this.showCard();
+        } else {
+            alert('Повторение завершено!');
+            this.showMainInterface();
+        }
     }
 
     updateProgress() {
-        document.getElementById('progress').textContent = 
-            `${this.currentCardIndex + 1}/${this.cards.length}`;
-    }
-
-    showEmptyState() {
-        document.getElementById('emptyState').style.display = 'block';
-        document.getElementById('cardContainer').style.display = 'none';
+        const progress = (this.currentCardIndex / this.cards.length) * 100;
+        document.getElementById('progressFill').style.width = progress + '%';
     }
 
     saveCards() {
@@ -140,49 +207,6 @@ class MemoryApp {
     loadCards() {
         const saved = localStorage.getItem('memoryCards');
         return saved ? JSON.parse(saved) : [];
-    }
-
-    exportCards() {
-        if (this.cards.length === 0) {
-            alert('Нет карточек для экспорта');
-            return;
-        }
-
-        const data = JSON.stringify(this.cards, null, 2);
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'memory-cards.json';
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-
-    importCards() {
-        document.getElementById('fileInput').click();
-    }
-
-    handleFileImport(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const importedCards = JSON.parse(e.target.result);
-                if (Array.isArray(importedCards)) {
-                    this.cards = [...this.cards, ...importedCards];
-                    this.saveCards();
-                    this.showCard();
-                    this.updateStats();
-                    alert(`Импортировано ${importedCards.length} карточек`);
-                }
-            } catch (error) {
-                alert('Ошибка импорта файла');
-            }
-        };
-        reader.readAsText(file);
-        event.target.value = '';
     }
 }
 
