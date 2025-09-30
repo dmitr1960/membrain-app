@@ -33,6 +33,7 @@
             color: white;
             padding: 30px;
             text-align: center;
+            position: relative;
         }
         
         .header h1 {
@@ -43,6 +44,25 @@
         .header p {
             font-size: 1.1em;
             opacity: 0.9;
+        }
+        
+        .back-btn {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
         }
         
         .navigation {
@@ -179,14 +199,46 @@
         }
         
         .theme-group {
-            margin-bottom: 30px;
+            margin-bottom: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
         }
         
-        .theme-group h3 {
+        .theme-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+        
+        .theme-header:hover {
+            background: #e9ecef;
+        }
+        
+        .theme-title {
+            font-size: 18px;
+            font-weight: bold;
             color: #2c3e50;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
+            flex-grow: 1;
+        }
+        
+        .theme-count {
+            background: #667eea;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .theme-cards {
+            display: none;
+            padding: 0 20px 20px 20px;
+            background: white;
         }
         
         .catalog-card {
@@ -305,12 +357,22 @@
                 flex-direction: column;
                 gap: 5px;
             }
+            
+            .back-btn {
+                position: relative;
+                left: auto;
+                top: auto;
+                transform: none;
+                margin-bottom: 10px;
+                width: 100px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
+            <button class="back-btn" onclick="memoryApp.showMainInterface()" style="display: none;">← Назад</button>
             <h1>🧠 MemBrain</h1>
             <p>AI-тренер памяти с интервальными повторениями</p>
         </div>
