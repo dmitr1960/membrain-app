@@ -1,11 +1,11 @@
-// manual.js - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// manual.js - ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ВЕРСИЯ
 
 class MemoryCard {
     constructor(question, answer, theme = '') {
         this.question = question;
         this.answer = answer;
         this.theme = theme;
-        this.id = Date.now() + Math.random();
+        this.id = Date.now() + Math.random().toString(36).substr(2, 9);
         this.lastReviewed = null;
         this.confidence = 3;
     }
@@ -26,6 +26,9 @@ class MemoryApp {
         this.showMainInterface();
         this.setupPasteHandler();
         this.setupBackButton();
+        
+        // Добавляем глобальные обработчики для модальных окон
+        this.setupModalHandlers();
     }
 
     bindEvents() {
@@ -79,6 +82,26 @@ class MemoryApp {
         if (backBtn) {
             backBtn.addEventListener('click', () => this.goBack());
         }
+    }
+
+    setupModalHandlers() {
+        // Закрытие модальных окон при клике вне их
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'editModal') {
+                this.hideEditModal();
+            }
+            if (e.target.id === 'deleteModal') {
+                this.hideDeleteModal();
+            }
+        });
+
+        // Закрытие по Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.hideEditModal();
+                this.hideDeleteModal();
+            }
+        });
     }
 
     goBack() {
@@ -326,12 +349,18 @@ class MemoryApp {
         this.showInterface('cardsContainer');
     }
 
-    // ДОБАВЛЕННЫЙ МЕТОД ДЛЯ ОБРАБОТКИ КНОПОК
+    // ИСПРАВЛЕННЫЙ МЕТОД ДЛЯ ОБРАБОТКИ КНОПОК
     bindCardActions() {
         // Обработчики для кнопок редактирования
         document.querySelectorAll('.edit-btn').forEach(btn => {
+            // Удаляем старые обработчики
+            btn.replaceWith(btn.cloneNode(true));
+        });
+        
+        document.querySelectorAll('.edit-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const cardId = e.target.getAttribute('data-card-id');
+                console.log('Edit button clicked, cardId:', cardId);
                 if (cardId) {
                     this.showEditModal(cardId);
                 }
@@ -340,8 +369,14 @@ class MemoryApp {
         
         // Обработчики для кнопок удаления
         document.querySelectorAll('.delete-btn').forEach(btn => {
+            // Удаляем старые обработчики
+            btn.replaceWith(btn.cloneNode(true));
+        });
+        
+        document.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const cardId = e.target.getAttribute('data-card-id');
+                console.log('Delete button clicked, cardId:', cardId);
                 if (cardId) {
                     this.showDeleteModal(cardId);
                 }
@@ -362,7 +397,7 @@ class MemoryApp {
         Object.entries(groupedByTheme).forEach(([theme, themeCards]) => {
             catalogHTML += `
                 <div class="theme-group">
-                    <div class="theme-header" onclick="memoryApp.toggleTheme('${theme}')">
+                    <div class="theme-header" onclick="memoryApp.toggleTheme('${this.encodeThemeId(theme)}')">
                         <div class="theme-title">${theme}</div>
                         <div class="theme-count">${themeCards.length}</div>
                     </div>
@@ -393,8 +428,8 @@ class MemoryApp {
         this.showInterface('catalogInterface');
     }
 
-    toggleTheme(theme) {
-        const themeElement = document.getElementById(`theme-${this.encodeThemeId(theme)}`);
+    toggleTheme(themeId) {
+        const themeElement = document.getElementById(`theme-${themeId}`);
         if (themeElement) {
             if (themeElement.style.display === 'block') {
                 themeElement.style.display = 'none';
@@ -517,8 +552,12 @@ class MemoryApp {
 
     // МЕТОДЫ РЕДАКТИРОВАНИЯ
     showEditModal(cardId) {
+        console.log('Showing edit modal for card:', cardId);
         const card = this.cards.find(c => c.id === cardId);
-        if (!card) return;
+        if (!card) {
+            console.error('Card not found:', cardId);
+            return;
+        }
         
         this.editingCardId = cardId;
         
@@ -535,10 +574,16 @@ class MemoryApp {
     }
 
     saveEditedCard() {
-        if (!this.editingCardId) return;
+        if (!this.editingCardId) {
+            console.error('No card ID for editing');
+            return;
+        }
         
         const card = this.cards.find(c => c.id === this.editingCardId);
-        if (!card) return;
+        if (!card) {
+            console.error('Card not found for editing:', this.editingCardId);
+            return;
+        }
         
         const newTheme = document.getElementById('editTheme').value.trim();
         const newQuestion = document.getElementById('editQuestion').value.trim();
@@ -556,14 +601,18 @@ class MemoryApp {
         this.saveCards();
         this.hideEditModal();
         
+        // Обновляем отображение в зависимости от текущего интерфейса
         if (this.currentInterface === 'catalogInterface') {
             this.showCatalog();
+        } else if (this.currentInterface === 'cardsContainer') {
+            this.displayGeneratedCards();
         }
         
         alert('Карточка успешно обновлена! ✅');
     }
 
     showDeleteModal(cardId) {
+        console.log('Showing delete modal for card:', cardId);
         this.deletingCardId = cardId;
         document.getElementById('deleteModal').style.display = 'flex';
     }
@@ -574,14 +623,28 @@ class MemoryApp {
     }
 
     confirmDeleteCard() {
-        if (!this.deletingCardId) return;
+        if (!this.deletingCardId) {
+            console.error('No card ID for deletion');
+            return;
+        }
         
+        const initialLength = this.cards.length;
         this.cards = this.cards.filter(c => c.id !== this.deletingCardId);
+        
+        if (this.cards.length === initialLength) {
+            console.error('Card was not deleted:', this.deletingCardId);
+            alert('Ошибка при удалении карточки');
+            return;
+        }
+        
         this.saveCards();
         this.hideDeleteModal();
         
+        // Обновляем отображение в зависимости от текущего интерфейса
         if (this.currentInterface === 'catalogInterface') {
             this.showCatalog();
+        } else if (this.currentInterface === 'cardsContainer') {
+            this.displayGeneratedCards();
         }
         
         alert('Карточка удалена! ✅');
@@ -604,12 +667,24 @@ class MemoryApp {
     }
 
     saveCards() {
-        localStorage.setItem('memoryCards', JSON.stringify(this.cards));
+        try {
+            localStorage.setItem('memoryCards', JSON.stringify(this.cards));
+            console.log('Cards saved successfully, total:', this.cards.length);
+        } catch (e) {
+            console.error('Error saving cards:', e);
+        }
     }
 
     loadCards() {
-        const saved = localStorage.getItem('memoryCards');
-        return saved ? JSON.parse(saved) : [];
+        try {
+            const saved = localStorage.getItem('memoryCards');
+            const cards = saved ? JSON.parse(saved) : [];
+            console.log('Cards loaded:', cards.length);
+            return cards;
+        } catch (e) {
+            console.error('Error loading cards:', e);
+            return [];
+        }
     }
 }
 
@@ -620,4 +695,5 @@ let memoryApp;
 document.addEventListener('DOMContentLoaded', () => {
     memoryApp = new MemoryApp();
     memoryApp.init();
+    console.log('MemBrain app initialized');
 });
