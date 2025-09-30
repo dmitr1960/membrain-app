@@ -4,7 +4,7 @@ class MemoryCard {
     constructor(question, answer, theme = '') {
         this.question = question;
         this.answer = answer;
-        this.theme = theme; // НОВОЕ ПОЛЕ: Тема
+        this.theme = theme;
         this.id = Date.now() + Math.random();
         this.lastReviewed = null;
         this.confidence = 3;
@@ -21,6 +21,39 @@ class MemoryApp {
     init() {
         this.bindEvents();
         this.showMainInterface();
+        this.setupPasteHandler(); // НОВОЕ: обработчик вставки текста
+    }
+
+    // НОВЫЙ МЕТОД: Обработчик вставки текста
+    setupPasteHandler() {
+        const textInput = document.getElementById('textInput');
+        if (textInput) {
+            textInput.addEventListener('paste', (e) => {
+                // Даем браузеру вставить текст
+                setTimeout(() => {
+                    this.autoDetectTheme();
+                }, 10);
+            });
+        }
+    }
+
+    // НОВЫЙ МЕТОД: Автоопределение темы из текста
+    autoDetectTheme() {
+        const textInput = document.getElementById('textInput');
+        const themeInput = document.getElementById('themeInput');
+        
+        if (!textInput || !themeInput) return;
+        
+        const text = textInput.value.trim();
+        if (!text) return;
+        
+        // Если поле темы пустое, пытаемся определить тему автоматически
+        if (!themeInput.value.trim()) {
+            const detectedTheme = this.findMainTopic(text);
+            if (detectedTheme && detectedTheme !== 'основное понятие') {
+                themeInput.value = detectedTheme;
+            }
+        }
     }
 
     bindEvents() {
@@ -60,139 +93,153 @@ class MemoryApp {
 
     generateCards() {
         const textInput = document.getElementById('textInput');
-        const themeInput = document.getElementById('themeInput'); // НОВОЕ: поле темы
+        const themeInput = document.getElementById('themeInput');
         
         if (!textInput) return;
         
         const text = textInput.value.trim();
-        const theme = themeInput ? themeInput.value.trim() : ''; // НОВОЕ: получаем тему
+        let theme = themeInput ? themeInput.value.trim() : '';
         
         if (!text) {
             alert('Введите текст для генерации карточек');
             return;
         }
         
-        this.cards = [];
+        // Если тема не указана, определяем автоматически
+        if (!theme) {
+            theme = this.findMainTopic(text);
+            if (themeInput) themeInput.value = theme;
+        }
         
-        // Используем введенную тему или находим автоматически
-        const mainTopic = theme || this.findMainTopic(text);
+        // ИСПРАВЛЕНИЕ: Не очищаем старые карточки, а добавляем новые
+        const newCards = [];
         
         // Разбиваем на предложения
         const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
         
         if (sentences.length === 0) {
             // Одна карточка если мало текста
-            this.cards.push(new MemoryCard(
-                `Что такое ${mainTopic}?`,
+            newCards.push(new MemoryCard(
+                `Что такое ${theme}?`,
                 text,
-                mainTopic // НОВОЕ: сохраняем тему
+                theme
             ));
         } else {
             // Создаем осмысленные вопросы для каждого предложения
             sentences.forEach((sentence, index) => {
                 const cleanSentence = sentence.trim();
-                const question = this.createContextQuestion(cleanSentence, mainTopic, index);
-                this.cards.push(new MemoryCard(question, cleanSentence, mainTopic)); // НОВОЕ: сохраняем тему
+                const question = this.createContextQuestion(cleanSentence, theme, index);
+                newCards.push(new MemoryCard(question, cleanSentence, theme));
             });
         }
         
+        // ИСПРАВЛЕНИЕ: Добавляем новые карточки к существующим
+        this.cards = [...this.cards, ...newCards];
+        
         this.saveCards();
         this.displayGeneratedCards();
-        alert(`Сгенерировано ${this.cards.length} карточек по теме "${mainTopic}"!`);
+        alert(`Добавлено ${newCards.length} карточек по теме "${theme}"! Всего карточек: ${this.cards.length}`);
     }
 
-    // Находим основную тему текста - УНИВЕРСАЛЬНАЯ ВЕРСИЯ
+    // Находим основную тему текста - УЛУЧШЕННАЯ ВЕРСИЯ
     findMainTopic(text) {
         const lines = text.split('\n').filter(line => line.trim().length > 0);
         
-        // Ищем тему в первой строке
+        // Ищем тему в первой строке (часто это заголовок)
         if (lines.length > 0) {
             const firstLine = lines[0].trim();
             
-            // Убираем служебные слова
-            let cleanLine = firstLine
-                .replace(/(формулировка|определение|понятие|теория|закон|принцип|правило|сущность|основа)\s+/gi, '')
-                .replace(/[.:]/g, '')
-                .trim();
-            
-            // Если после очистки остался осмысленный текст (2-6 слов)
-            const wordCount = cleanLine.split(' ').length;
-            if (wordCount >= 1 && wordCount <= 6 && cleanLine.length > 3) {
-                return cleanLine;
-            }
-        }
-        
-        // Ищем в первом предложении
-        const firstSentence = text.split(/[.!?]+/)[0];
-        let cleanSentence = firstSentence
-            .replace(/(формулировка|определение|понятие|теория)\s+/gi, '')
-            .trim();
-        
-        const words = cleanSentence.split(' ');
-        
-        // Ищем слова с большой буквы (термины)
-        for (let i = 0; i < words.length; i++) {
-            const word = words[i].replace(/[^a-яё]/gi, '');
-            if (word.length > 4 && words[i][0] === words[i][0].toUpperCase()) {
-                if (!this.isServiceWord(word.toLowerCase())) {
-                    return word;
+            // Проверяем, не слишком ли длинная первая строка (возможно это текст, а не заголовок)
+            if (firstLine.length <= 100) {
+                // Убираем служебные слова
+                let cleanLine = firstLine
+                    .replace(/(формулировка|определение|понятие|теория|закон|принцип|правило|сущность|основа|разновидности|виды|типы|классификация)\s+/gi, '')
+                    .replace(/[.:\-–—]/g, '')
+                    .trim();
+                
+                // Если после очистки остался осмысленный текст (1-6 слов)
+                const wordCount = cleanLine.split(' ').length;
+                if (wordCount >= 1 && wordCount <= 6 && cleanLine.length > 3) {
+                    return cleanLine;
                 }
             }
         }
         
-        // Ищем самые длинные значимые слова
-        const meaningfulWords = words.filter(word => {
-            const clean = word.replace(/[^a-яё]/gi, '');
-            return clean.length > 4 && !this.isServiceWord(clean.toLowerCase());
-        });
-        
-        if (meaningfulWords.length >= 2) {
-            return meaningfulWords.slice(0, 2).join(' ');
+        // Ищем в первых двух предложениях
+        const sentences = text.split(/[.!?]+/).slice(0, 2);
+        for (let sentence of sentences) {
+            let cleanSentence = sentence
+                .replace(/(формулировка|определение|понятие|теория|разновидности|виды|типы)\s+/gi, '')
+                .trim();
+            
+            const words = cleanSentence.split(' ').filter(word => word.length > 0);
+            
+            // Ищем слова с большой буквы (термины)
+            for (let i = 0; i < words.length; i++) {
+                const word = words[i].replace(/[^a-яё]/gi, '');
+                if (word.length > 4 && words[i][0] === words[i][0].toUpperCase()) {
+                    if (!this.isServiceWord(word.toLowerCase())) {
+                        return word;
+                    }
+                }
+            }
+            
+            // Ищем самые длинные значимые слова
+            const meaningfulWords = words.filter(word => {
+                const clean = word.replace(/[^a-яё]/gi, '');
+                return clean.length > 4 && !this.isServiceWord(clean.toLowerCase());
+            });
+            
+            if (meaningfulWords.length >= 2) {
+                return meaningfulWords.slice(0, 2).join(' ');
+            }
+            
+            if (meaningfulWords.length === 1) {
+                return meaningfulWords[0];
+            }
         }
         
-        if (meaningfulWords.length === 1) {
-            return meaningfulWords[0];
-        }
-        
-        // Последний вариант - первые два слова
-        if (words.length >= 2) {
-            return words.slice(0, 2).join(' ');
+        // Последний вариант - первые два слова первого предложения
+        const firstSentenceWords = text.split(' ').slice(0, 2);
+        if (firstSentenceWords.length >= 2) {
+            return firstSentenceWords.join(' ');
         }
         
         return 'основное понятие';
     }
 
-    // Проверка служебных слов
+    // Проверка служебных слов - РАСШИРЕННЫЙ СПИСОК
     isServiceWord(word) {
         const serviceWords = [
             'формулировка', 'определение', 'понятие', 'теория', 'закон',
             'принцип', 'правило', 'теорема', 'аксиома', 'лемма', 
             'свойство', 'признак', 'явление', 'процесс', 'явление',
-            'сущность', 'основа', 'смысл', 'значение', 'роль'
+            'сущность', 'основа', 'смысл', 'значение', 'роль',
+            'разновидности', 'виды', 'типы', 'классификация', 'пример',
+            'особенности', 'характеристики', 'свойства', 'функции'
         ];
         return serviceWords.includes(word);
     }
 
-    // Создаем осмысленные вопросы в контексте темы - УНИВЕРСАЛЬНАЯ ВЕРСИЯ
+    // Создаем осмысленные вопросы в контексте темы
     createContextQuestion(sentence, mainTopic, index) {
         const lowerSentence = sentence.toLowerCase();
         const lowerTopic = mainTopic.toLowerCase();
         
         // Исключаем вопросы, которые дублируют тему
         if (lowerSentence.includes(lowerTopic) && sentence.length < 50) {
-            // Пропускаем предложения, которые просто повторяют тему
             const alternativeQuestions = [
                 `Какие ключевые аспекты этого понятия?`,
                 `Что конкретно описывает это утверждение?`,
                 `Какая важная информация содержится здесь?`,
-                `О чём идёт речь в этом контексте?`
+                `О чём идёт речь в этом контексте?`,
+                `Что означает это положение?`
             ];
             return alternativeQuestions[index % alternativeQuestions.length];
         }
         
         // Определяем тип предложения и создаем соответствующий вопрос
         if (index === 0) {
-            // Первое предложение - основное определение
             return `В чём состоит ${mainTopic}?`;
         }
         
@@ -241,7 +288,8 @@ class MemoryApp {
             `Что уточняется в ${mainTopic}?`,
             `Как работает ${mainTopic}?`,
             `В чём особенность ${mainTopic}?`,
-            `Какие характеристики у ${mainTopic}?`
+            `Какие характеристики у ${mainTopic}?`,
+            `Что описывает это утверждение о ${mainTopic}?`
         ];
         
         return contextQuestions[index % contextQuestions.length];
@@ -255,7 +303,10 @@ class MemoryApp {
         
         cardsList.innerHTML = '';
         
-        this.cards.forEach((card) => {
+        // Показываем только последние сгенерированные карточки (для удобства)
+        const recentCards = this.cards.slice(-10); // Последние 10 карточек
+        
+        recentCards.forEach((card) => {
             const cardElement = document.createElement('div');
             cardElement.className = 'card';
             cardElement.innerHTML = `
@@ -270,7 +321,7 @@ class MemoryApp {
         document.getElementById('mainInterface').style.display = 'none';
     }
 
-    // НОВЫЙ МЕТОД: Показ каталога
+    // Показ каталога
     showCatalog() {
         if (this.cards.length === 0) {
             alert('Нет созданных карточек. Сначала создайте карточки.');
@@ -284,7 +335,7 @@ class MemoryApp {
         Object.entries(groupedByTheme).forEach(([theme, themeCards]) => {
             catalogHTML += `
                 <div class="theme-group">
-                    <h3>${theme}</h3>
+                    <h3>${theme} (${themeCards.length} карточек)</h3>
                     ${themeCards.map(card => `
                         <div class="catalog-card">
                             <div style="font-weight: bold; margin-bottom: 8px;">${card.question}</div>
@@ -299,7 +350,7 @@ class MemoryApp {
         this.showInterface('catalogInterface');
     }
 
-    // НОВЫЙ МЕТОД: Группировка карточек по темам
+    // Группировка карточек по темам
     groupCardsByTheme() {
         return this.cards.reduce((groups, card) => {
             const theme = card.theme || 'Без темы';
@@ -309,7 +360,7 @@ class MemoryApp {
         }, {});
     }
 
-    // НОВЫЙ МЕТОД: Универсальный показ интерфейсов
+    // Универсальный показ интерфейсов
     showInterface(interfaceName) {
         // Скрываем все интерфейсы
         document.getElementById('mainInterface').style.display = 'none';
