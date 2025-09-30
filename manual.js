@@ -1,9 +1,10 @@
 // manual.js - УНИВЕРСАЛЬНЫЙ КОД ДЛЯ ЛЮБЫХ ТЕМ
 
 class MemoryCard {
-    constructor(question, answer) {
+    constructor(question, answer, theme = '') {
         this.question = question;
         this.answer = answer;
+        this.theme = theme; // НОВОЕ ПОЛЕ: Тема
         this.id = Date.now() + Math.random();
         this.lastReviewed = null;
         this.confidence = 3;
@@ -59,9 +60,13 @@ class MemoryApp {
 
     generateCards() {
         const textInput = document.getElementById('textInput');
+        const themeInput = document.getElementById('themeInput'); // НОВОЕ: поле темы
+        
         if (!textInput) return;
         
         const text = textInput.value.trim();
+        const theme = themeInput ? themeInput.value.trim() : ''; // НОВОЕ: получаем тему
+        
         if (!text) {
             alert('Введите текст для генерации карточек');
             return;
@@ -69,8 +74,8 @@ class MemoryApp {
         
         this.cards = [];
         
-        // Находим основную тему из текста
-        const mainTopic = this.findMainTopic(text);
+        // Используем введенную тему или находим автоматически
+        const mainTopic = theme || this.findMainTopic(text);
         
         // Разбиваем на предложения
         const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
@@ -79,20 +84,21 @@ class MemoryApp {
             // Одна карточка если мало текста
             this.cards.push(new MemoryCard(
                 `Что такое ${mainTopic}?`,
-                text
+                text,
+                mainTopic // НОВОЕ: сохраняем тему
             ));
         } else {
             // Создаем осмысленные вопросы для каждого предложения
             sentences.forEach((sentence, index) => {
                 const cleanSentence = sentence.trim();
                 const question = this.createContextQuestion(cleanSentence, mainTopic, index);
-                this.cards.push(new MemoryCard(question, cleanSentence));
+                this.cards.push(new MemoryCard(question, cleanSentence, mainTopic)); // НОВОЕ: сохраняем тему
             });
         }
         
         this.saveCards();
         this.displayGeneratedCards();
-        alert(`Сгенерировано ${this.cards.length} карточек!`);
+        alert(`Сгенерировано ${this.cards.length} карточек по теме "${mainTopic}"!`);
     }
 
     // Находим основную тему текста - УНИВЕРСАЛЬНАЯ ВЕРСИЯ
@@ -170,6 +176,19 @@ class MemoryApp {
     // Создаем осмысленные вопросы в контексте темы - УНИВЕРСАЛЬНАЯ ВЕРСИЯ
     createContextQuestion(sentence, mainTopic, index) {
         const lowerSentence = sentence.toLowerCase();
+        const lowerTopic = mainTopic.toLowerCase();
+        
+        // Исключаем вопросы, которые дублируют тему
+        if (lowerSentence.includes(lowerTopic) && sentence.length < 50) {
+            // Пропускаем предложения, которые просто повторяют тему
+            const alternativeQuestions = [
+                `Какие ключевые аспекты этого понятия?`,
+                `Что конкретно описывает это утверждение?`,
+                `Какая важная информация содержится здесь?`,
+                `О чём идёт речь в этом контексте?`
+            ];
+            return alternativeQuestions[index % alternativeQuestions.length];
+        }
         
         // Определяем тип предложения и создаем соответствующий вопрос
         if (index === 0) {
@@ -240,6 +259,7 @@ class MemoryApp {
             const cardElement = document.createElement('div');
             cardElement.className = 'card';
             cardElement.innerHTML = `
+                ${card.theme ? `<div class="card-theme">${card.theme}</div>` : ''}
                 <div class="card-question">${card.question}</div>
                 <div class="card-answer">${card.answer}</div>
             `;
@@ -250,26 +270,67 @@ class MemoryApp {
         document.getElementById('mainInterface').style.display = 'none';
     }
 
+    // НОВЫЙ МЕТОД: Показ каталога
+    showCatalog() {
+        if (this.cards.length === 0) {
+            alert('Нет созданных карточек. Сначала создайте карточки.');
+            this.showInterface('mainInterface');
+            return;
+        }
+        
+        const groupedByTheme = this.groupCardsByTheme();
+        let catalogHTML = '';
+        
+        Object.entries(groupedByTheme).forEach(([theme, themeCards]) => {
+            catalogHTML += `
+                <div class="theme-group">
+                    <h3>${theme}</h3>
+                    ${themeCards.map(card => `
+                        <div class="catalog-card">
+                            <div style="font-weight: bold; margin-bottom: 8px;">${card.question}</div>
+                            <div style="color: #666; font-size: 14px;">${card.answer.substring(0, 100)}${card.answer.length > 100 ? '...' : ''}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        });
+        
+        document.getElementById('catalogList').innerHTML = catalogHTML;
+        this.showInterface('catalogInterface');
+    }
+
+    // НОВЫЙ МЕТОД: Группировка карточек по темам
+    groupCardsByTheme() {
+        return this.cards.reduce((groups, card) => {
+            const theme = card.theme || 'Без темы';
+            if (!groups[theme]) groups[theme] = [];
+            groups[theme].push(card);
+            return groups;
+        }, {});
+    }
+
+    // НОВЫЙ МЕТОД: Универсальный показ интерфейсов
+    showInterface(interfaceName) {
+        // Скрываем все интерфейсы
+        document.getElementById('mainInterface').style.display = 'none';
+        document.getElementById('cardsContainer').style.display = 'none';
+        document.getElementById('reviewInterface').style.display = 'none';
+        document.getElementById('catalogInterface').style.display = 'none';
+        
+        // Показываем нужный интерфейс
+        document.getElementById(interfaceName).style.display = 'block';
+    }
+
     startReview() {
         if (this.cards.length === 0) {
-            alert('Нет карточек для повторения');
+            alert('Нет карточек для повторения. Сначала создайте карточки.');
+            this.showInterface('mainInterface');
             return;
         }
         
         this.currentCardIndex = 0;
-        this.showReviewInterface();
+        this.showInterface('reviewInterface');
         this.showCard();
-    }
-
-    showReviewInterface() {
-        document.getElementById('cardsContainer').style.display = 'none';
-        document.getElementById('reviewInterface').style.display = 'block';
-    }
-
-    showMainInterface() {
-        document.getElementById('mainInterface').style.display = 'block';
-        document.getElementById('cardsContainer').style.display = 'none';
-        document.getElementById('reviewInterface').style.display = 'none';
     }
 
     showCard() {
@@ -318,7 +379,7 @@ class MemoryApp {
             this.showCard();
         } else {
             alert('Повторение завершено!');
-            this.showMainInterface();
+            this.showInterface('mainInterface');
         }
     }
 
@@ -340,7 +401,11 @@ class MemoryApp {
     }
 }
 
+// Глобальная переменная для доступа к приложению
+let memoryApp;
+
 // Запуск приложения
 document.addEventListener('DOMContentLoaded', () => {
-    new MemoryApp().init();
+    memoryApp = new MemoryApp();
+    memoryApp.init();
 });
