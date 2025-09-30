@@ -45,8 +45,51 @@
             opacity: 0.9;
         }
         
+        .navigation {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .nav-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            color: #667eea;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .nav-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
         .main-interface {
             padding: 40px;
+        }
+        
+        .theme-input-container {
+            margin-bottom: 20px;
+        }
+        
+        .theme-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .theme-input:focus {
+            outline: none;
+            border-color: #667eea;
         }
         
         .text-input-container {
@@ -101,6 +144,19 @@
             padding: 25px;
             margin-bottom: 20px;
             border-left: 5px solid #667eea;
+            position: relative;
+        }
+        
+        .card-theme {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
         }
         
         .card-question {
@@ -108,12 +164,37 @@
             font-weight: bold;
             margin-bottom: 15px;
             color: #2c3e50;
+            margin-right: 80px;
         }
         
         .card-answer {
             font-size: 16px;
             color: #34495e;
             line-height: 1.5;
+        }
+        
+        .catalog-interface {
+            display: none;
+            padding: 40px;
+        }
+        
+        .theme-group {
+            margin-bottom: 30px;
+        }
+        
+        .theme-group h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .catalog-card {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
         }
         
         .review-interface {
@@ -219,6 +300,11 @@
             .action-buttons {
                 flex-direction: column;
             }
+            
+            .navigation {
+                flex-direction: column;
+                gap: 5px;
+            }
         }
     </style>
 </head>
@@ -229,7 +315,16 @@
             <p>AI-тренер памяти с интервальными повторениями</p>
         </div>
         
+        <div class="navigation">
+            <button class="nav-btn" onclick="memoryApp.showInterface('mainInterface')">📝 Создать карточки</button>
+            <button class="nav-btn" onclick="memoryApp.showCatalog()">📚 Каталог</button>
+            <button class="nav-btn" onclick="memoryApp.startReview()">🔄 Повторение</button>
+        </div>
+        
         <div class="main-interface" id="mainInterface">
+            <div class="theme-input-container">
+                <input type="text" id="themeInput" class="theme-input" placeholder="Введите тему/заголовок (например: Фотосинтез)">
+            </div>
             <div class="text-input-container">
                 <textarea id="textInput" placeholder="Введите текст для изучения...&#10;&#10;Пример:&#10;Фотосинтез - это процесс образования органических веществ из неорганических при участии солнечной энергии. Включает световую и темновую фазы. Хлорофилл поглощает световую энергию..."></textarea>
             </div>
@@ -240,6 +335,11 @@
             <h3>Сгенерированные карточки:</h3>
             <div id="cardsList"></div>
             <button id="startReviewBtn" style="width: 100%; padding: 15px; margin-top: 20px; background: #27ae60; color: white; border: none; border-radius: 10px; font-size: 16px;">Начать повторение</button>
+        </div>
+        
+        <div class="catalog-interface" id="catalogInterface">
+            <h3 style="text-align: center; margin-bottom: 30px; color: #2c3e50;">📚 Каталог карточек</h3>
+            <div id="catalogList"></div>
         </div>
         
         <div class="review-interface" id="reviewInterface">
