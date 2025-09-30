@@ -16,20 +16,42 @@ class MemoryApp {
         this.cards = this.loadCards();
         this.currentCardIndex = 0;
         this.isAnswerShown = false;
+        this.currentInterface = 'mainInterface'; // НОВОЕ: отслеживаем текущий интерфейс
     }
 
     init() {
         this.bindEvents();
         this.showMainInterface();
-        this.setupPasteHandler(); // НОВОЕ: обработчик вставки текста
+        this.setupPasteHandler();
+        this.setupBackButton(); // НОВОЕ: настройка кнопки назад
     }
 
-    // НОВЫЙ МЕТОД: Обработчик вставки текста
+    // НОВЫЙ МЕТОД: Настройка кнопки назад
+    setupBackButton() {
+        const backBtn = document.querySelector('.back-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => this.goBack());
+        }
+    }
+
+    // НОВЫЙ МЕТОД: Логика кнопки назад
+    goBack() {
+        switch(this.currentInterface) {
+            case 'cardsContainer':
+            case 'catalogInterface':
+            case 'reviewInterface':
+                this.showMainInterface();
+                break;
+            default:
+                this.showMainInterface();
+        }
+    }
+
+    // Обработчик вставки текста
     setupPasteHandler() {
         const textInput = document.getElementById('textInput');
         if (textInput) {
             textInput.addEventListener('paste', (e) => {
-                // Даем браузеру вставить текст
                 setTimeout(() => {
                     this.autoDetectTheme();
                 }, 10);
@@ -37,7 +59,7 @@ class MemoryApp {
         }
     }
 
-    // НОВЫЙ МЕТОД: Автоопределение темы из текста
+    // Автоопределение темы из текста
     autoDetectTheme() {
         const textInput = document.getElementById('textInput');
         const themeInput = document.getElementById('themeInput');
@@ -47,7 +69,6 @@ class MemoryApp {
         const text = textInput.value.trim();
         if (!text) return;
         
-        // Если поле темы пустое, пытаемся определить тему автоматически
         if (!themeInput.value.trim()) {
             const detectedTheme = this.findMainTopic(text);
             if (detectedTheme && detectedTheme !== 'основное понятие') {
@@ -105,27 +126,21 @@ class MemoryApp {
             return;
         }
         
-        // Если тема не указана, определяем автоматически
         if (!theme) {
             theme = this.findMainTopic(text);
             if (themeInput) themeInput.value = theme;
         }
         
-        // ИСПРАВЛЕНИЕ: Не очищаем старые карточки, а добавляем новые
         const newCards = [];
-        
-        // Разбиваем на предложения
         const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
         
         if (sentences.length === 0) {
-            // Одна карточка если мало текста
             newCards.push(new MemoryCard(
                 `Что такое ${theme}?`,
                 text,
                 theme
             ));
         } else {
-            // Создаем осмысленные вопросы для каждого предложения
             sentences.forEach((sentence, index) => {
                 const cleanSentence = sentence.trim();
                 const question = this.createContextQuestion(cleanSentence, theme, index);
@@ -133,7 +148,6 @@ class MemoryApp {
             });
         }
         
-        // ИСПРАВЛЕНИЕ: Добавляем новые карточки к существующим
         this.cards = [...this.cards, ...newCards];
         
         this.saveCards();
@@ -141,23 +155,19 @@ class MemoryApp {
         alert(`Добавлено ${newCards.length} карточек по теме "${theme}"! Всего карточек: ${this.cards.length}`);
     }
 
-    // Находим основную тему текста - УЛУЧШЕННАЯ ВЕРСИЯ
+    // Находим основную тему текста
     findMainTopic(text) {
         const lines = text.split('\n').filter(line => line.trim().length > 0);
         
-        // Ищем тему в первой строке (часто это заголовок)
         if (lines.length > 0) {
             const firstLine = lines[0].trim();
             
-            // Проверяем, не слишком ли длинная первая строка (возможно это текст, а не заголовок)
             if (firstLine.length <= 100) {
-                // Убираем служебные слова
                 let cleanLine = firstLine
                     .replace(/(формулировка|определение|понятие|теория|закон|принцип|правило|сущность|основа|разновидности|виды|типы|классификация)\s+/gi, '')
                     .replace(/[.:\-–—]/g, '')
                     .trim();
                 
-                // Если после очистки остался осмысленный текст (1-6 слов)
                 const wordCount = cleanLine.split(' ').length;
                 if (wordCount >= 1 && wordCount <= 6 && cleanLine.length > 3) {
                     return cleanLine;
@@ -165,7 +175,6 @@ class MemoryApp {
             }
         }
         
-        // Ищем в первых двух предложениях
         const sentences = text.split(/[.!?]+/).slice(0, 2);
         for (let sentence of sentences) {
             let cleanSentence = sentence
@@ -174,7 +183,6 @@ class MemoryApp {
             
             const words = cleanSentence.split(' ').filter(word => word.length > 0);
             
-            // Ищем слова с большой буквы (термины)
             for (let i = 0; i < words.length; i++) {
                 const word = words[i].replace(/[^a-яё]/gi, '');
                 if (word.length > 4 && words[i][0] === words[i][0].toUpperCase()) {
@@ -184,7 +192,6 @@ class MemoryApp {
                 }
             }
             
-            // Ищем самые длинные значимые слова
             const meaningfulWords = words.filter(word => {
                 const clean = word.replace(/[^a-яё]/gi, '');
                 return clean.length > 4 && !this.isServiceWord(clean.toLowerCase());
@@ -199,7 +206,6 @@ class MemoryApp {
             }
         }
         
-        // Последний вариант - первые два слова первого предложения
         const firstSentenceWords = text.split(' ').slice(0, 2);
         if (firstSentenceWords.length >= 2) {
             return firstSentenceWords.join(' ');
@@ -208,7 +214,7 @@ class MemoryApp {
         return 'основное понятие';
     }
 
-    // Проверка служебных слов - РАСШИРЕННЫЙ СПИСОК
+    // Проверка служебных слов
     isServiceWord(word) {
         const serviceWords = [
             'формулировка', 'определение', 'понятие', 'теория', 'закон',
@@ -226,7 +232,6 @@ class MemoryApp {
         const lowerSentence = sentence.toLowerCase();
         const lowerTopic = mainTopic.toLowerCase();
         
-        // Исключаем вопросы, которые дублируют тему
         if (lowerSentence.includes(lowerTopic) && sentence.length < 50) {
             const alternativeQuestions = [
                 `Какие ключевые аспекты этого понятия?`,
@@ -238,7 +243,6 @@ class MemoryApp {
             return alternativeQuestions[index % alternativeQuestions.length];
         }
         
-        // Определяем тип предложения и создаем соответствующий вопрос
         if (index === 0) {
             return `В чём состоит ${mainTopic}?`;
         }
@@ -280,7 +284,6 @@ class MemoryApp {
             return `Какую функцию выполняет ${mainTopic}?`;
         }
         
-        // Стандартные вопросы в контексте темы
         const contextQuestions = [
             `Что ещё важно знать о ${mainTopic}?`,
             `Какие дополнительные свойства имеет ${mainTopic}?`,
@@ -303,8 +306,7 @@ class MemoryApp {
         
         cardsList.innerHTML = '';
         
-        // Показываем только последние сгенерированные карточки (для удобства)
-        const recentCards = this.cards.slice(-10); // Последние 10 карточек
+        const recentCards = this.cards.slice(-10);
         
         recentCards.forEach((card) => {
             const cardElement = document.createElement('div');
@@ -317,11 +319,10 @@ class MemoryApp {
             cardsList.appendChild(cardElement);
         });
         
-        cardsContainer.style.display = 'block';
-        document.getElementById('mainInterface').style.display = 'none';
+        this.showInterface('cardsContainer');
     }
 
-    // Показ каталога
+    // УЛУЧШЕННЫЙ МЕТОД: Показ каталога с древовидной структурой
     showCatalog() {
         if (this.cards.length === 0) {
             alert('Нет созданных карточек. Сначала создайте карточки.');
@@ -335,19 +336,41 @@ class MemoryApp {
         Object.entries(groupedByTheme).forEach(([theme, themeCards]) => {
             catalogHTML += `
                 <div class="theme-group">
-                    <h3>${theme} (${themeCards.length} карточек)</h3>
-                    ${themeCards.map(card => `
-                        <div class="catalog-card">
-                            <div style="font-weight: bold; margin-bottom: 8px;">${card.question}</div>
-                            <div style="color: #666; font-size: 14px;">${card.answer.substring(0, 100)}${card.answer.length > 100 ? '...' : ''}</div>
-                        </div>
-                    `).join('')}
+                    <div class="theme-header" onclick="memoryApp.toggleTheme('${theme}')">
+                        <div class="theme-title">${theme}</div>
+                        <div class="theme-count">${themeCards.length}</div>
+                    </div>
+                    <div class="theme-cards" id="theme-${this.encodeThemeId(theme)}">
+                        ${themeCards.map(card => `
+                            <div class="catalog-card">
+                                <div style="font-weight: bold; margin-bottom: 8px;">${card.question}</div>
+                                <div style="color: #666; font-size: 14px;">${card.answer.substring(0, 100)}${card.answer.length > 100 ? '...' : ''}</div>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
             `;
         });
         
         document.getElementById('catalogList').innerHTML = catalogHTML;
         this.showInterface('catalogInterface');
+    }
+
+    // НОВЫЙ МЕТОД: Переключение отображения карточек темы
+    toggleTheme(theme) {
+        const themeElement = document.getElementById(`theme-${this.encodeThemeId(theme)}`);
+        if (themeElement) {
+            if (themeElement.style.display === 'block') {
+                themeElement.style.display = 'none';
+            } else {
+                themeElement.style.display = 'block';
+            }
+        }
+    }
+
+    // НОВЫЙ МЕТОД: Кодирование ID темы для использования в DOM
+    encodeThemeId(theme) {
+        return theme.replace(/[^a-zA-Z0-9а-яА-Я]/g, '-').toLowerCase();
     }
 
     // Группировка карточек по темам
@@ -360,7 +383,7 @@ class MemoryApp {
         }, {});
     }
 
-    // Универсальный показ интерфейсов
+    // УЛУЧШЕННЫЙ МЕТОД: Универсальный показ интерфейсов
     showInterface(interfaceName) {
         // Скрываем все интерфейсы
         document.getElementById('mainInterface').style.display = 'none';
@@ -370,6 +393,29 @@ class MemoryApp {
         
         // Показываем нужный интерфейс
         document.getElementById(interfaceName).style.display = 'block';
+        
+        // Обновляем кнопку назад
+        this.updateBackButton(interfaceName);
+        
+        // Сохраняем текущий интерфейс
+        this.currentInterface = interfaceName;
+    }
+
+    // НОВЫЙ МЕТОД: Обновление видимости кнопки назад
+    updateBackButton(interfaceName) {
+        const backBtn = document.querySelector('.back-btn');
+        if (backBtn) {
+            if (interfaceName === 'mainInterface') {
+                backBtn.style.display = 'none';
+            } else {
+                backBtn.style.display = 'block';
+            }
+        }
+    }
+
+    // УЛУЧШЕННЫЙ МЕТОД: Показ главного интерфейса
+    showMainInterface() {
+        this.showInterface('mainInterface');
     }
 
     startReview() {
