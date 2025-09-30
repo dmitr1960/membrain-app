@@ -1,12 +1,12 @@
-// manual.js - ПОЛНОСТЬЮ ПЕРЕПИСАННАЯ РАБОЧАЯ ВЕРСИЯ
+// manual.js - ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ РАБОЧАЯ ВЕРСИЯ
 
 class MemoryCard {
     constructor(question, answer, theme = '') {
         this.question = question;
         this.answer = answer;
         this.theme = theme;
-        // Используем простой числовой ID для избежания проблем с сериализацией
-        this.id = 'card_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+        // Простой числовой ID
+        this.id = Date.now() + '_' + Math.floor(Math.random() * 1000000);
         this.lastReviewed = null;
         this.confidence = 3;
     }
@@ -21,8 +21,7 @@ class MemoryApp {
         this.editingCardId = null;
         this.deletingCardId = null;
         
-        // Делегирование событий для кнопок
-        this.setupEventDelegation();
+        console.log('App initialized with cards:', this.cards.length);
     }
 
     init() {
@@ -31,28 +30,32 @@ class MemoryApp {
         this.setupPasteHandler();
         this.setupBackButton();
         this.setupModalHandlers();
+        this.setupEventDelegation();
     }
 
-    // ОСНОВНОЕ ИСПРАВЛЕНИЕ: Делегирование событий
+    // ДЕЛЕГИРОВАНИЕ СОБЫТИЙ - ОСНОВНОЕ ИСПРАВЛЕНИЕ
     setupEventDelegation() {
-        // Обработчик для всех кнопок редактирования и удаления
         document.addEventListener('click', (e) => {
             const target = e.target;
             
-            // Обработка кнопок редактирования
+            // Редактирование
             if (target.classList.contains('edit-btn')) {
                 const cardId = target.getAttribute('data-card-id');
+                console.log('Edit clicked, cardId:', cardId);
                 if (cardId) {
                     this.showEditModal(cardId);
                 }
+                e.stopPropagation();
             }
             
-            // Обработка кнопок удаления
+            // Удаление
             if (target.classList.contains('delete-btn')) {
                 const cardId = target.getAttribute('data-card-id');
+                console.log('Delete clicked, cardId:', cardId);
                 if (cardId) {
                     this.showDeleteModal(cardId);
                 }
+                e.stopPropagation();
             }
         });
     }
@@ -534,12 +537,18 @@ class MemoryApp {
         }
     }
 
-    // МЕТОДЫ РЕДАКТИРОВАНИЯ
+    // МЕТОДЫ РЕДАКТИРОВАНИЯ И УДАЛЕНИЯ
     showEditModal(cardId) {
         console.log('Showing edit modal for card:', cardId);
-        const card = this.cards.find(c => c.id === cardId);
+        console.log('All cards:', this.cards);
+        
+        const card = this.cards.find(c => {
+            console.log('Comparing:', c.id, 'with', cardId, 'result:', c.id == cardId);
+            return c.id == cardId;
+        });
+        
         if (!card) {
-            console.error('Card not found:', cardId);
+            console.error('Card not found. Available cards:', this.cards.map(c => c.id));
             alert('Ошибка: карточка не найдена');
             return;
         }
@@ -564,7 +573,7 @@ class MemoryApp {
             return;
         }
         
-        const card = this.cards.find(c => c.id === this.editingCardId);
+        const card = this.cards.find(c => c.id == this.editingCardId);
         if (!card) {
             console.error('Card not found for editing:', this.editingCardId);
             alert('Ошибка: карточка не найдена');
@@ -587,7 +596,7 @@ class MemoryApp {
         this.saveCards();
         this.hideEditModal();
         
-        // Обновляем отображение в зависимости от текущего интерфейса
+        // Обновляем отображение
         if (this.currentInterface === 'catalogInterface') {
             this.showCatalog();
         } else if (this.currentInterface === 'cardsContainer') {
@@ -618,16 +627,12 @@ class MemoryApp {
         console.log('Cards before deletion:', this.cards.length);
         
         const initialLength = this.cards.length;
-        this.cards = this.cards.filter(c => {
-            const shouldKeep = c.id !== this.deletingCardId;
-            console.log(`Card ${c.id} should keep: ${shouldKeep}`);
-            return shouldKeep;
-        });
+        this.cards = this.cards.filter(c => c.id != this.deletingCardId);
         
         console.log('Cards after deletion:', this.cards.length);
         
         if (this.cards.length === initialLength) {
-            console.error('Card was not deleted:', this.deletingCardId);
+            console.error('Card was not deleted. Available cards:', this.cards.map(c => c.id));
             alert('Ошибка при удалении карточки: карточка не найдена');
             return;
         }
@@ -635,7 +640,7 @@ class MemoryApp {
         this.saveCards();
         this.hideDeleteModal();
         
-        // Обновляем отображение в зависимости от текущего интерфейса
+        // Обновляем отображение
         if (this.currentInterface === 'catalogInterface') {
             this.showCatalog();
         } else if (this.currentInterface === 'cardsContainer') {
@@ -677,18 +682,24 @@ class MemoryApp {
             const saved = localStorage.getItem('memoryCards');
             if (!saved) return [];
             
-            const cards = JSON.parse(saved);
-            console.log('Cards loaded:', cards.length);
+            const cardsData = JSON.parse(saved);
+            console.log('Raw cards data loaded:', cardsData);
             
-            // Восстанавливаем прототип для всех карточек
-            return cards.map(cardData => {
-                const card = new MemoryCard(cardData.question, cardData.answer, cardData.theme);
-                // Сохраняем оригинальный ID
-                card.id = cardData.id;
-                card.lastReviewed = cardData.lastReviewed;
-                card.confidence = cardData.confidence;
+            // Восстанавливаем карточки как простые объекты
+            const cards = cardsData.map(cardData => {
+                const card = {
+                    id: cardData.id || ('card_' + Date.now() + '_' + Math.floor(Math.random() * 1000000)),
+                    question: cardData.question || '',
+                    answer: cardData.answer || '',
+                    theme: cardData.theme || '',
+                    lastReviewed: cardData.lastReviewed || null,
+                    confidence: cardData.confidence || 3
+                };
                 return card;
             });
+            
+            console.log('Cards loaded:', cards.length);
+            return cards;
         } catch (e) {
             console.error('Error loading cards:', e);
             return [];
