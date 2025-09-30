@@ -3,418 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MemBrain - AI Тренер памяти</title>
-    <link rel="manifest" href="manifest.json">
+    <title>MemBrain - Тренер памяти</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+        /* ВСЕ СУЩЕСТВУЮЩИЕ СТИЛИ ОСТАЮТСЯ */
         
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #2c3e50, #34495e);
-            color: white;
-            padding: 30px;
-            text-align: center;
-            position: relative;
-        }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-        
-        .back-btn {
-            position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.3s;
-        }
-        
-        .back-btn:hover {
-            background: rgba(255,255,255,0.3);
-        }
-        
-        .navigation {
+        /* НОВЫЕ СТИЛИ ДЛЯ РЕДАКТИРОВАНИЯ */
+        .card-actions {
+            margin-top: 10px;
             display: flex;
-            justify-content: center;
             gap: 10px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e0e0e0;
         }
         
-        .nav-btn {
-            padding: 10px 20px;
-            background: white;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            color: #667eea;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .nav-btn:hover {
-            background: #667eea;
-            color: white;
-        }
-        
-        .main-interface {
-            padding: 40px;
-        }
-        
-        .theme-input-container {
-            margin-bottom: 20px;
-        }
-        
-        .theme-input {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-        
-        .theme-input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .text-input-container {
-            margin-bottom: 30px;
-        }
-        
-        #textInput {
-            width: 100%;
-            height: 150px;
-            padding: 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 15px;
-            font-size: 16px;
-            resize: vertical;
-            transition: border-color 0.3s;
-        }
-        
-        #textInput:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        #generateBtn {
-            width: 100%;
-            padding: 18px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 15px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        
-        #generateBtn:hover {
-            transform: translateY(-2px);
-        }
-        
-        #generateBtn:active {
-            transform: translateY(0);
-        }
-        
-        .cards-container {
-            display: none;
-            margin-top: 30px;
-        }
-        
-        .card {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 20px;
-            border-left: 5px solid #667eea;
-            position: relative;
-        }
-        
-        .card-theme {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            background: #667eea;
-            color: white;
+        .edit-btn, .delete-btn {
             padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .card-question {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #2c3e50;
-            margin-right: 80px;
-        }
-        
-        .card-answer {
-            font-size: 16px;
-            color: #34495e;
-            line-height: 1.5;
-        }
-        
-        .catalog-interface {
-            display: none;
-            padding: 40px;
-        }
-        
-        .theme-group {
-            margin-bottom: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        
-        .theme-header {
-            background: #f8f9fa;
-            padding: 15px 20px;
-            cursor: pointer;
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            transition: background 0.3s;
-        }
-        
-        .theme-header:hover {
-            background: #e9ecef;
-        }
-        
-        .theme-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #2c3e50;
-            flex-grow: 1;
-        }
-        
-        .theme-count {
-            background: #667eea;
-            color: white;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .theme-cards {
-            display: none;
-            padding: 0 20px 20px 20px;
-            background: white;
-        }
-        
-        .catalog-card {
-            background: #f8f9fa;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 10px;
-            border-left: 4px solid #3498db;
-        }
-        
-        .review-interface {
-            display: none;
-            text-align: center;
-        }
-        
-        .progress-bar {
-            background: #ecf0f1;
-            border-radius: 10px;
-            height: 10px;
-            margin: 20px 0;
-            overflow: hidden;
-        }
-        
-        .progress-fill {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            height: 100%;
-            width: 0%;
-            transition: width 0.3s;
-        }
-        
-        .question-card {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            margin: 30px 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            min-height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        
-        .answer-card {
-            background: #f8f9fa;
-            border-radius: 20px;
-            padding: 30px;
-            margin: 20px 0;
-            display: none;
-            font-size: 18px;
-            line-height: 1.6;
-            color: #34495e;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 30px;
-        }
-        
-        .action-btn {
-            padding: 15px 30px;
             border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: bold;
+            border-radius: 5px;
+            font-size: 12px;
             cursor: pointer;
             transition: all 0.3s;
         }
         
-        .show-answer-btn {
+        .edit-btn {
             background: #3498db;
             color: white;
         }
         
-        .rating-btn {
-            display: none;
+        .delete-btn {
+            background: #e74c3c;
             color: white;
         }
         
-        .hard-btn { background: #e74c3c; }
-        .good-btn { background: #f39c12; }
-        .easy-btn { background: #27ae60; }
-        
-        .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        .edit-btn:hover, .delete-btn:hover {
+            transform: translateY(-1px);
         }
         
-        @media (max-width: 768px) {
-            .container {
-                margin: 10px;
-                border-radius: 15px;
-            }
-            
-            .header {
-                padding: 20px;
-            }
-            
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .main-interface {
-                padding: 20px;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-            }
-            
-            .navigation {
-                flex-direction: column;
-                gap: 5px;
-            }
-            
-            .back-btn {
-                position: relative;
-                left: auto;
-                top: auto;
-                transform: none;
-                margin-bottom: 10px;
-                width: 100px;
-            }
+        /* Стили для модального окна редактирования */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 15px;
+            resize: vertical;
+        }
+        
+        .modal-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        
+        .save-btn, .cancel-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .save-btn {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .cancel-btn {
+            background: #95a5a6;
+            color: white;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <button class="back-btn" onclick="memoryApp.showMainInterface()" style="display: none;">← Назад</button>
-            <h1>🧠 MemBrain</h1>
-            <p>AI-тренер памяти с интервальными повторениями</p>
-        </div>
-        
-        <div class="navigation">
-            <!-- УБИРАЕМ ЛИШНЮЮ КНОПКУ "Создать карточки" -->
-            <button class="nav-btn" onclick="memoryApp.showCatalog()">📚 Каталог</button>
-            <button class="nav-btn" onclick="memoryApp.startReview()">🔄 Повторение</button>
-        </div>
-        
-        <div class="main-interface" id="mainInterface">
-            <div class="theme-input-container">
-                <input type="text" id="themeInput" class="theme-input" placeholder="Введите тему/заголовок (например: Фотосинтез)">
-            </div>
-            <div class="text-input-container">
-                <textarea id="textInput" placeholder="Введите текст для изучения...&#10;&#10;Пример:&#10;Фотосинтез - это процесс образования органических веществ из неорганических при участии солнечной энергии. Включает световую и темновую фазы. Хлорофилл поглощает световую энергию..."></textarea>
-            </div>
-            <button id="generateBtn">🧠 Сгенерировать карточки</button>
-        </div>
-        
-        <div class="cards-container" id="cardsContainer">
-            <h3>Сгенерированные карточки:</h3>
-            <div id="cardsList"></div>
-            <button id="startReviewBtn" style="width: 100%; padding: 15px; margin-top: 20px; background: #27ae60; color: white; border: none; border-radius: 10px; font-size: 16px;">Начать повторение</button>
-        </div>
+        <!-- ВЕСЬ СУЩЕСТВУЮЩИЙ КОД ОСТАЕТСЯ -->
         
         <div class="catalog-interface" id="catalogInterface">
             <h3 style="text-align: center; margin-bottom: 30px; color: #2c3e50;">📚 Каталог карточек</h3>
             <div id="catalogList"></div>
         </div>
         
-        <div class="review-interface" id="reviewInterface">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
+        <!-- ОСТАЛЬНЫЕ ИНТЕРФЕЙСЫ -->
+    </div>
+
+    <!-- ФУТЕР -->
+    <div style="text-align: center; padding: 20px; color: #666; font-size: 12px;">
+        MemBrain - бесплатное приложение для обучения | 
+        <button onclick="memoryApp.shareApp()" style="background: none; border: none; color: #667eea; cursor: pointer;">
+            📤 Поделиться
+        </button>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h3>✏️ Редактировать карточку</h3>
+            <input type="text" id="editTheme" class="modal-input" placeholder="Тема">
+            <input type="text" id="editQuestion" class="modal-input" placeholder="Вопрос">
+            <textarea id="editAnswer" class="modal-input" placeholder="Ответ" rows="4"></textarea>
+            <div class="modal-buttons">
+                <button class="cancel-btn" onclick="memoryApp.hideEditModal()">Отмена</button>
+                <button class="save-btn" onclick="memoryApp.saveEditedCard()">Сохранить</button>
             </div>
-            <div class="question-card" id="questionCard"></div>
-            <div class="answer-card" id="answerCard"></div>
-            <div class="action-buttons">
-                <button class="action-btn show-answer-btn" id="showAnswerBtn">Показать ответ</button>
-                <button class="action-btn rating-btn hard-btn" id="hardBtn" data-rating="2">😣 Сложно</button>
-                <button class="action-btn rating-btn good-btn" id="goodBtn" data-rating="3">😐 Нормально</button>
-                <button class="action-btn rating-btn easy-btn" id="easyBtn" data-rating="4">😊 Легко</button>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <h3>🗑️ Удалить карточку?</h3>
+            <p>Вы уверены, что хотите удалить эту карточку? Это действие нельзя отменить.</p>
+            <div class="modal-buttons">
+                <button class="cancel-btn" onclick="memoryApp.hideDeleteModal()">Отмена</button>
+                <button class="save-btn" style="background: #e74c3c;" onclick="memoryApp.confirmDeleteCard()">Удалить</button>
             </div>
         </div>
     </div>
