@@ -310,10 +310,10 @@ class MemoryApp {
                 <div class="card-question">${card.question}</div>
                 <div class="card-answer">${card.answer}</div>
                 <div class="card-actions">
-                    <button class="edit-btn" onclick="memoryApp.showEditModal('${card.id}')">
+                    <button class="edit-btn" data-card-id="${card.id}">
                         ✏️ Редактировать
                     </button>
-                    <button class="delete-btn" onclick="memoryApp.showDeleteModal('${card.id}')">
+                    <button class="delete-btn" data-card-id="${card.id}">
                         🗑️ Удалить
                     </button>
                 </div>
@@ -321,7 +321,32 @@ class MemoryApp {
             cardsList.appendChild(cardElement);
         });
         
+        // Добавляем обработчики событий после создания элементов
+        this.bindCardActions();
         this.showInterface('cardsContainer');
+    }
+
+    // ДОБАВЛЕННЫЙ МЕТОД ДЛЯ ОБРАБОТКИ КНОПОК
+    bindCardActions() {
+        // Обработчики для кнопок редактирования
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const cardId = e.target.getAttribute('data-card-id');
+                if (cardId) {
+                    this.showEditModal(cardId);
+                }
+            });
+        });
+        
+        // Обработчики для кнопок удаления
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const cardId = e.target.getAttribute('data-card-id');
+                if (cardId) {
+                    this.showDeleteModal(cardId);
+                }
+            });
+        });
     }
 
     showCatalog() {
@@ -347,10 +372,10 @@ class MemoryApp {
                                 <div style="font-weight: bold; margin-bottom: 8px;">${card.question}</div>
                                 <div style="color: #666; font-size: 14px; margin-bottom: 10px;">${card.answer.substring(0, 100)}${card.answer.length > 100 ? '...' : ''}</div>
                                 <div class="card-actions">
-                                    <button class="edit-btn" onclick="memoryApp.showEditModal('${card.id}')">
+                                    <button class="edit-btn" data-card-id="${card.id}">
                                         ✏️ Редактировать
                                     </button>
-                                    <button class="delete-btn" onclick="memoryApp.showDeleteModal('${card.id}')">
+                                    <button class="delete-btn" data-card-id="${card.id}">
                                         🗑️ Удалить
                                     </button>
                                 </div>
@@ -362,6 +387,9 @@ class MemoryApp {
         });
         
         document.getElementById('catalogList').innerHTML = catalogHTML;
+        
+        // Добавляем обработчики для каталога
+        this.bindCardActions();
         this.showInterface('catalogInterface');
     }
 
@@ -372,6 +400,8 @@ class MemoryApp {
                 themeElement.style.display = 'none';
             } else {
                 themeElement.style.display = 'block';
+                // Перепривязываем обработчики при показе темы
+                setTimeout(() => this.bindCardActions(), 10);
             }
         }
     }
@@ -485,7 +515,7 @@ class MemoryApp {
         }
     }
 
-    // НОВЫЕ МЕТОДЫ РЕДАКТИРОВАНИЯ
+    // МЕТОДЫ РЕДАКТИРОВАНИЯ
     showEditModal(cardId) {
         const card = this.cards.find(c => c.id === cardId);
         if (!card) return;
