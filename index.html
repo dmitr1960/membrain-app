@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MemBrain - Тренер памяти</title>
+    <title>MemBrain - AI Тренер памяти</title>
+    <link rel="manifest" href="manifest.json">
     <style>
         * {
             box-sizing: border-box;
@@ -71,6 +72,7 @@
             padding: 15px;
             background: #f8f9fa;
             border-bottom: 1px solid #e0e0e0;
+            flex-wrap: wrap;
         }
         
         .nav-btn {
@@ -115,13 +117,55 @@
             border-color: #667eea;
         }
         
+        .question-input-container {
+            margin-bottom: 15px;
+        }
+        
+        .question-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .question-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .ask-ai-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 15px;
+            transition: transform 0.2s;
+        }
+        
+        .ask-ai-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .ask-ai-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
         .text-input-container {
             margin-bottom: 30px;
         }
         
         #textInput {
             width: 100%;
-            height: 150px;
+            height: 200px;
             padding: 20px;
             border: 2px solid #e0e0e0;
             border-radius: 15px;
@@ -497,6 +541,42 @@
             margin-left: 10px;
         }
         
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: #27ae60;
+            color: white;
+            border-radius: 8px;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+        
+        .notification.error {
+            background: #e74c3c;
+        }
+        
+        .notification.info {
+            background: #3498db;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
         @media (max-width: 768px) {
             .container {
                 margin: 10px;
@@ -540,11 +620,12 @@
         <div class="header">
             <button class="back-btn" onclick="memoryApp.showMainInterface()" style="display: none;">← Назад</button>
             <h1>🧠 MemBrain</h1>
-            <p>Тренер памяти с интервальными повторениями</p>
+            <p>AI Тренер памяти с интервальными повторениями</p>
         </div>
         
         <div class="navigation">
             <button class="nav-btn" onclick="memoryApp.showCatalog()">📚 Каталог</button>
+            <button class="nav-btn" onclick="memoryApp.showStatistics()">📊 Статистика</button>
             <button class="nav-btn" onclick="memoryApp.startReview()">🔄 Повторение</button>
         </div>
         
@@ -555,8 +636,14 @@
             <div class="theme-input-container">
                 <input type="text" id="themeInput" class="theme-input" placeholder="Введите тему (например: Строение клетки)">
             </div>
+            <div class="question-input-container">
+                <input type="text" id="questionInput" class="question-input" placeholder="Задайте вопрос AI (например: Что такое фотосинтез?)">
+            </div>
+            <button id="askAiBtn" class="ask-ai-btn">
+                🤖 Спросить AI
+            </button>
             <div class="text-input-container">
-                <textarea id="textInput" placeholder="Введите текст для изучения...&#10;&#10;Пример:&#10;Клетка — это основная структурная и функциональная единица живого организма. Все живые существа состоят из клеток...&#10;&#10;💡 Приложение автоматически выделит ключевые моменты и создаст осмысленные карточки!"></textarea>
+                <textarea id="textInput" placeholder="Введите текст для изучения ИЛИ получите ответ от AI...&#10;&#10;Пример:&#10;Клетка — это основная структурная и функциональная единица живого организма. Все живые существа состоят из клеток...&#10;&#10;💡 Можно ввести текст вручную ИЛИ задать вопрос AI выше!"></textarea>
             </div>
             <button id="generateBtn">🧠 Сгенерировать карточки</button>
         </div>
@@ -597,7 +684,7 @@
     <!-- МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ -->
     <div id="editModal" class="modal">
         <div class="modal-content">
-            <h3>✏️ Редактировать карточку</h3>
+            <h3>✏ Редактировать карточку</h3>
             <input type="text" id="editSubject" class="modal-input" placeholder="Предмет">
             <input type="text" id="editTheme" class="modal-input" placeholder="Тема">
             <input type="text" id="editQuestion" class="modal-input" placeholder="Вопрос">
@@ -612,7 +699,7 @@
     <!-- МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ -->
     <div id="deleteModal" class="modal">
         <div class="modal-content">
-            <h3>🗑️ Удалить карточку?</h3>
+            <h3>🗑 Удалить карточку?</h3>
             <p>Вы уверены, что хотите удалить эту карточку? Это действие нельзя отменить.</p>
             <div class="modal-buttons">
                 <button class="cancel-btn" onclick="memoryApp.hideDeleteModal()">Отмена</button>
@@ -624,7 +711,7 @@
     <!-- МОДАЛЬНОЕ ОКНО УДАЛЕНИЯ ТЕМЫ -->
     <div id="deleteThemeModal" class="modal">
         <div class="modal-content">
-            <h3>🗑️ Удалить тему?</h3>
+            <h3>🗑 Удалить тему?</h3>
             <p id="deleteThemeText">Вы уверены, что хотите удалить эту тему и все карточки в ней? Это действие нельзя отменить.</p>
             <div class="modal-buttons">
                 <button class="cancel-btn" onclick="memoryApp.hideDeleteThemeModal()">Отмена</button>
@@ -636,7 +723,7 @@
     <!-- МОДАЛЬНОЕ ОКНО УДАЛЕНИЯ ПРЕДМЕТА -->
     <div id="deleteSubjectModal" class="modal">
         <div class="modal-content">
-            <h3>🗑️ Удалить предмет?</h3>
+            <h3>🗑 Удалить предмет?</h3>
             <p id="deleteSubjectText">Вы уверены, что хотите удалить этот предмет и все темы с карточками в нем? Это действие нельзя отменить.</p>
             <div class="modal-buttons">
                 <button class="cancel-btn" onclick="memoryApp.hideDeleteSubjectModal()">Отмена</button>
