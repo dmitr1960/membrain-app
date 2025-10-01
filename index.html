@@ -93,11 +93,15 @@
             padding: 40px;
         }
         
-        .theme-input-container {
-            margin-bottom: 20px;
+        .subject-input-container {
+            margin-bottom: 15px;
         }
         
-        .theme-input {
+        .theme-input-container {
+            margin-bottom: 15px;
+        }
+        
+        .theme-input, .subject-input {
             width: 100%;
             padding: 15px;
             border: 2px solid #e0e0e0;
@@ -106,7 +110,7 @@
             transition: border-color 0.3s;
         }
         
-        .theme-input:focus {
+        .theme-input:focus, .subject-input:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -166,6 +170,18 @@
             position: relative;
         }
         
+        .card-subject {
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            background: #27ae60;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
         .card-theme {
             position: absolute;
             top: 10px;
@@ -183,7 +199,7 @@
             font-weight: bold;
             margin-bottom: 15px;
             color: #2c3e50;
-            margin-right: 80px;
+            margin: 50px 0 15px 0;
         }
         
         .card-answer {
@@ -226,16 +242,58 @@
             padding: 40px;
         }
         
-        .theme-group {
-            margin-bottom: 15px;
+        .subject-group {
+            margin-bottom: 25px;
             border: 1px solid #e0e0e0;
             border-radius: 10px;
             overflow: hidden;
         }
         
+        .subject-header {
+            background: #2c3e50;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+        
+        .subject-header:hover {
+            background: #34495e;
+        }
+        
+        .subject-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            flex-grow: 1;
+        }
+        
+        .subject-count {
+            background: #667eea;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .subject-themes {
+            display: none;
+            padding: 0;
+            background: white;
+        }
+        
+        .theme-group {
+            margin: 0;
+            border: none;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
         .theme-header {
             background: #f8f9fa;
-            padding: 15px 20px;
+            padding: 12px 20px;
             cursor: pointer;
             display: flex;
             justify-content: space-between;
@@ -248,14 +306,14 @@
         }
         
         .theme-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             color: #2c3e50;
             flex-grow: 1;
         }
         
         .theme-count {
-            background: #667eea;
+            background: #95a5a6;
             color: white;
             padding: 3px 8px;
             border-radius: 12px;
@@ -265,7 +323,7 @@
         
         .theme-cards {
             display: none;
-            padding: 0 20px 20px 20px;
+            padding: 0 20px 15px 20px;
             background: white;
         }
         
@@ -428,6 +486,17 @@
             color: white;
         }
         
+        .delete-subject-btn, .delete-theme-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 margin: 10px;
@@ -480,11 +549,14 @@
         </div>
         
         <div class="main-interface" id="mainInterface">
+            <div class="subject-input-container">
+                <input type="text" id="subjectInput" class="subject-input" placeholder="Введите предмет (например: Биология)">
+            </div>
             <div class="theme-input-container">
-                <input type="text" id="themeInput" class="theme-input" placeholder="Введите тему/заголовок (например: Фотосинтез)">
+                <input type="text" id="themeInput" class="theme-input" placeholder="Введите тему (например: Строение клетки)">
             </div>
             <div class="text-input-container">
-                <textarea id="textInput" placeholder="Введите текст для изучения...&#10;&#10;Пример:&#10;Фотосинтез - это процесс образования органических веществ из неорганических при участии солнечной энергии. Включает световую и темновую фазы. Хлорофилл поглощает световую энергию..."></textarea>
+                <textarea id="textInput" placeholder="Введите текст для изучения...&#10;&#10;Пример:&#10;Клетка — это основная структурная и функциональная единица живого организма. Все живые существа состоят из клеток...&#10;&#10;💡 Приложение автоматически выделит ключевые моменты и создаст осмысленные карточки!"></textarea>
             </div>
             <button id="generateBtn">🧠 Сгенерировать карточки</button>
         </div>
@@ -526,6 +598,7 @@
     <div id="editModal" class="modal">
         <div class="modal-content">
             <h3>✏️ Редактировать карточку</h3>
+            <input type="text" id="editSubject" class="modal-input" placeholder="Предмет">
             <input type="text" id="editTheme" class="modal-input" placeholder="Тема">
             <input type="text" id="editQuestion" class="modal-input" placeholder="Вопрос">
             <textarea id="editAnswer" class="modal-input" placeholder="Ответ" rows="4"></textarea>
@@ -544,6 +617,30 @@
             <div class="modal-buttons">
                 <button class="cancel-btn" onclick="memoryApp.hideDeleteModal()">Отмена</button>
                 <button class="save-btn" style="background: #e74c3c;" onclick="memoryApp.confirmDeleteCard()">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО УДАЛЕНИЯ ТЕМЫ -->
+    <div id="deleteThemeModal" class="modal">
+        <div class="modal-content">
+            <h3>🗑️ Удалить тему?</h3>
+            <p id="deleteThemeText">Вы уверены, что хотите удалить эту тему и все карточки в ней? Это действие нельзя отменить.</p>
+            <div class="modal-buttons">
+                <button class="cancel-btn" onclick="memoryApp.hideDeleteThemeModal()">Отмена</button>
+                <button class="save-btn" style="background: #e74c3c;" onclick="memoryApp.confirmDeleteTheme()">Удалить тему</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО УДАЛЕНИЯ ПРЕДМЕТА -->
+    <div id="deleteSubjectModal" class="modal">
+        <div class="modal-content">
+            <h3>🗑️ Удалить предмет?</h3>
+            <p id="deleteSubjectText">Вы уверены, что хотите удалить этот предмет и все темы с карточками в нем? Это действие нельзя отменить.</p>
+            <div class="modal-buttons">
+                <button class="cancel-btn" onclick="memoryApp.hideDeleteSubjectModal()">Отмена</button>
+                <button class="save-btn" style="background: #e74c3c;" onclick="memoryApp.confirmDeleteSubject()">Удалить предмет</button>
             </div>
         </div>
     </div>
