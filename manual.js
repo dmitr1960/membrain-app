@@ -1,4 +1,4 @@
-// manual.js - УМНАЯ ГЕНЕРАЦИЯ ПО СМЫСЛОВЫМ БЛОКАМ С AI-ОТВЕТАМИ
+// manual.js - ПОЛНЫЙ КОД С УЛУЧШЕННОЙ ГЕНЕРАЦИЕЙ ВОПРОСОВ
 
 class MemoryCard {
     constructor(question, answer, theme = '', subject = '') {
@@ -10,9 +10,10 @@ class MemoryCard {
         this.lastReviewed = null;
         this.confidence = 3;
         this.createdAt = new Date().toISOString();
+        this.nextReviewDate = this.calculateNextReviewDate();
     }
 
-    getNextReviewDate() {
+    calculateNextReviewDate() {
         const intervals = {
             2: 1,    // Сложно - через 1 день
             3: 3,    // Нормально - через 3 дня  
@@ -20,11 +21,253 @@ class MemoryCard {
         };
         
         const nextDate = new Date();
+        if (this.lastReviewed) {
+            nextDate.setTime(new Date(this.lastReviewed).getTime());
+        }
         nextDate.setDate(nextDate.getDate() + intervals[this.confidence]);
         return nextDate;
     }
+
+    isDueForReview() {
+        if (!this.lastReviewed) return true;
+        return new Date() >= new Date(this.nextReviewDate);
+    }
+
+    getConfidenceText() {
+        const confidenceMap = {
+            2: '😣 Сложно',
+            3: '😐 Нормально',
+            4: '😊 Легко'
+        };
+        return confidenceMap[this.confidence] || '😐 Нормально';
+    }
 }
 
+// УЛУЧШЕННЫЙ ГЕНЕРАТОР ВОПРОСОВ
+class QuestionGenerator {
+    constructor() {
+        this.patterns = {
+            location: [
+                /столица/i,
+                /город/i,
+                /страна/i,
+                /расположен/i,
+                /находится/i,
+                /место/i,
+                /река/i,
+                /гора/i,
+                /озеро/i,
+                /материк/i
+            ],
+            date: [
+                /год/i,
+                /век/i,
+                /дата/i,
+                /когда/i,
+                /время/i,
+                /период/i,
+                /возраст/i,
+                /эпоха/i
+            ],
+            person: [
+                /ученый/i,
+                /писатель/i,
+                /поэт/i,
+                /изобретатель/i,
+                /открыл/i,
+                /создал/i,
+                /автор/i,
+                /художник/i,
+                /композитор/i,
+                /правитель/i
+            ],
+            event: [
+                /война/i,
+                /революция/i,
+                /событие/i,
+                /явление/i,
+                /процесс/i,
+                /битва/i,
+                /реформа/i,
+                /открытие/i
+            ],
+            definition: [
+                /определение/i,
+                /означает/i,
+                /понятие/i,
+                /термин/i,
+                /называется/i,
+                /это\s+/,
+                /является/i
+            ]
+        };
+    }
+
+    generateCardsFromFacts(facts, theme = '', subject = '') {
+        return facts.map(factObj => {
+            const fact = factObj.fact || factObj;
+            const { question, answer } = this.generateQuestionAnswer(fact);
+            return new MemoryCard(question, answer, theme, subject);
+        });
+    }
+
+    generateQuestionAnswer(fact) {
+        const factType = this.detectFactType(fact);
+        const { question, answer } = this.applyQuestionTemplate(fact, factType);
+        
+        return { question, answer };
+    }
+
+    detectFactType(fact) {
+        const lowerFact = fact.toLowerCase();
+        
+        for (const [type, patterns] of Object.entries(this.patterns)) {
+            if (patterns.some(pattern => pattern.test(lowerFact))) {
+                return type;
+            }
+        }
+        
+        return 'general';
+    }
+
+    applyQuestionTemplate(fact, factType) {
+        const templates = {
+            location: this.generateLocationQuestion,
+            date: this.generateDateQuestion,
+            person: this.generatePersonQuestion,
+            event: this.generateEventQuestion,
+            definition: this.generateDefinitionQuestion,
+            general: this.generateGeneralQuestion
+        };
+
+        const generator = templates[factType] || templates.general;
+        return generator.call(this, fact);
+    }
+
+    generateLocationQuestion(fact) {
+        if (/столица/i.test(fact)) {
+            const country = this.extractEntity(fact, /столица\s+([^—.,]+)/i) || 
+                           this.extractEntity(fact, /([^—.,]+)\s+столица/i);
+            return {
+                question: `Какая столица ${country || 'этой страны'}?`,
+                answer: this.extractAnswer(fact)
+            };
+        }
+        
+        return {
+            question: `Где ${this.makeQuestionPhrase(fact)}?`,
+            answer: this.extractAnswer(fact)
+        };
+    }
+
+    generateDateQuestion(fact) {
+        const yearMatch = fact.match(/\b(\d{4})\b/);
+        if (yearMatch) {
+            const event = this.extractEntity(fact, /(.+)\s+\d{4}/) || 
+                         this.extractEntity(fact, /\d{4}\s+(.+)/);
+            return {
+                question: `Когда ${event ? `было ${event}` : 'произошло это событие'}?`,
+                answer: `${yearMatch[1]} год`
+            };
+        }
+        
+        return {
+            question: `Когда ${this.makeQuestionPhrase(fact)}?`,
+            answer: this.extractAnswer(fact)
+        };
+    }
+
+    generatePersonQuestion(fact) {
+        return {
+            question: `Кто ${this.makeQuestionPhrase(fact)}?`,
+            answer: this.extractAnswer(fact)
+        };
+    }
+
+    generateEventQuestion(fact) {
+        return {
+            question: `Что ${this.makeQuestionPhrase(fact)}?`,
+            answer: this.extractAnswer(fact)
+        };
+    }
+
+    generateDefinitionQuestion(fact) {
+        const term = this.extractEntity(fact, /([^—]+)\s+—/) ||
+                    this.extractEntity(fact, /([^—]+)\s+это/) ||
+                    this.extractEntity(fact, /определение\s+([^.,]+)/i);
+        
+        if (term) {
+            return {
+                question: `Что такое "${term.trim()}"?`,
+                answer: this.extractAnswer(fact)
+            };
+        }
+        
+        return {
+            question: `Что означает "${this.extractMainSubject(fact)}"?`,
+            answer: this.extractAnswer(fact)
+        };
+    }
+
+    generateGeneralQuestion(fact) {
+        const mainSubject = this.extractMainSubject(fact);
+        return {
+            question: `Как называется ${mainSubject}?`,
+            answer: this.extractAnswer(fact)
+        };
+    }
+
+    extractEntity(text, pattern) {
+        const match = text.match(pattern);
+        return match ? match[1].trim() : null;
+    }
+
+    extractAnswer(fact) {
+        const parts = fact.split(/[—–:]/);
+        if (parts.length > 1) {
+            return parts[1].trim();
+        }
+        
+        const words = fact.split(' ');
+        if (words.length <= 5) {
+            return fact;
+        }
+        
+        return words.slice(-3).join(' ');
+    }
+
+    makeQuestionPhrase(fact) {
+        let phrase = fact.toLowerCase();
+        phrase = phrase.replace(/это\s+/, '');
+        phrase = phrase.replace(/является\s+/, '');
+        phrase = phrase.replace(/был[ао]?\s+/, '');
+        phrase = phrase.replace(/есть\s+/, '');
+        
+        const words = phrase.split(' ');
+        if (words.length > 8) {
+            phrase = words.slice(0, 8).join(' ');
+        }
+        
+        return phrase;
+    }
+
+    extractMainSubject(fact) {
+        const words = fact.split(' ');
+        return words.slice(0, Math.min(3, words.length)).join(' ');
+    }
+
+    async generateQuestionWithAI(fact) {
+        console.log('AI question generation for:', fact);
+        return new Promise(resolve => {
+            setTimeout(() => {
+                const fallback = this.generateQuestionAnswer(fact);
+                resolve(fallback);
+            }, 500);
+        });
+    }
+}
+
+// ОСНОВНОЙ КЛАСС ПРИЛОЖЕНИЯ
 class MemoryApp {
     constructor() {
         this.cards = this.loadCards();
@@ -36,6 +279,12 @@ class MemoryApp {
         this.deletingThemeName = null;
         this.deletingSubjectName = null;
         this.reviewCards = [];
+        this.selectedReviewOption = null;
+        this.selectedSubjects = new Set();
+        this.selectedThemes = new Set();
+        this.selectedConfidence = 'all';
+        
+        this.questionGenerator = new QuestionGenerator();
         
         console.log('App initialized with cards:', this.cards.length);
     }
@@ -49,32 +298,26 @@ class MemoryApp {
         this.setupEventDelegation();
     }
 
-    // ДЕЛЕГИРОВАНИЕ СОБЫТИЙ
     setupEventDelegation() {
         document.addEventListener('click', (e) => {
             const target = e.target;
             
-            // Редактирование карточки
             if (target.classList.contains('edit-btn')) {
                 const cardId = target.getAttribute('data-card-id');
-                console.log('Edit clicked, cardId:', cardId);
                 if (cardId) {
                     this.showEditModal(cardId);
                 }
                 e.stopPropagation();
             }
             
-            // Удаление карточки
             if (target.classList.contains('delete-btn')) {
                 const cardId = target.getAttribute('data-card-id');
-                console.log('Delete clicked, cardId:', cardId);
                 if (cardId) {
                     this.showDeleteModal(cardId);
                 }
                 e.stopPropagation();
             }
             
-            // Удаление темы
             if (target.classList.contains('delete-theme-btn')) {
                 const themeName = target.getAttribute('data-theme-name');
                 const subjectName = target.getAttribute('data-subject-name');
@@ -84,7 +327,6 @@ class MemoryApp {
                 e.stopPropagation();
             }
             
-            // Удаление предмета
             if (target.classList.contains('delete-subject-btn')) {
                 const subjectName = target.getAttribute('data-subject-name');
                 if (subjectName) {
@@ -100,6 +342,7 @@ class MemoryApp {
             generateBtn: document.getElementById('generateBtn'),
             askAiBtn: document.getElementById('askAiBtn'),
             startReviewBtn: document.getElementById('startReviewBtn'),
+            startReviewSelectionBtn: document.getElementById('startReviewSelectionBtn'),
             showAnswerBtn: document.getElementById('showAnswerBtn'),
             hardBtn: document.getElementById('hardBtn'),
             goodBtn: document.getElementById('goodBtn'),
@@ -118,6 +361,10 @@ class MemoryApp {
             elements.startReviewBtn.addEventListener('click', () => this.startReview());
         }
         
+        if (elements.startReviewSelectionBtn) {
+            elements.startReviewSelectionBtn.addEventListener('click', () => this.startSelectedReview());
+        }
+        
         if (elements.showAnswerBtn) {
             elements.showAnswerBtn.addEventListener('click', () => this.showAnswer());
         }
@@ -134,7 +381,6 @@ class MemoryApp {
             elements.easyBtn.addEventListener('click', () => this.rateCard(4));
         }
 
-        // Enter для вопроса AI
         const questionInput = document.getElementById('questionInput');
         if (questionInput) {
             questionInput.addEventListener('keypress', (e) => {
@@ -164,7 +410,6 @@ class MemoryApp {
     }
 
     setupModalHandlers() {
-        // Закрытие модальных окон при клике вне их
         document.addEventListener('click', (e) => {
             if (e.target.id === 'editModal') {
                 this.hideEditModal();
@@ -180,7 +425,6 @@ class MemoryApp {
             }
         });
 
-        // Закрытие по Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.hideEditModal();
@@ -191,19 +435,256 @@ class MemoryApp {
         });
     }
 
-    goBack() {
-        switch(this.currentInterface) {
-            case 'cardsContainer':
-            case 'catalogInterface':
-            case 'reviewInterface':
-                this.showMainInterface();
-                break;
-            default:
-                this.showMainInterface();
+    // СИСТЕМА ПОВТОРЕНИЯ
+    showReviewSelect() {
+        if (this.cards.length === 0) {
+            this.showNotification('Нет карточек для повторения. Сначала создайте карточки.', 'error');
+            this.showInterface('mainInterface');
+            return;
+        }
+        
+        this.selectedReviewOption = null;
+        this.selectedSubjects.clear();
+        this.selectedThemes.clear();
+        this.selectedConfidence = 'all';
+        
+        this.updateCustomSelectionUI();
+        this.showInterface('reviewSelectInterface');
+    }
+
+    selectReviewOption(option) {
+        document.querySelectorAll('.review-option').forEach(el => {
+            el.classList.remove('selected');
+        });
+        
+        event.target.closest('.review-option').classList.add('selected');
+        this.selectedReviewOption = option;
+        
+        const customSelection = document.getElementById('customSelection');
+        if (option === 'custom') {
+            customSelection.style.display = 'block';
+        } else {
+            customSelection.style.display = 'none';
+        }
+        
+        this.updateStartButton();
+    }
+
+    updateCustomSelectionUI() {
+        const subjects = [...new Set(this.cards.map(card => card.subject).filter(Boolean))];
+        const themes = [...new Set(this.cards.map(card => card.theme).filter(Boolean))];
+        
+        const subjectSelection = document.getElementById('subjectSelection');
+        subjectSelection.innerHTML = subjects.map(subject => 
+            `<div class="selection-item" onclick="memoryApp.toggleSelection(this, 'subject')" data-value="${subject}">${subject}</div>`
+        ).join('');
+        
+        const themeSelection = document.getElementById('themeSelection');
+        themeSelection.innerHTML = themes.map(theme => 
+            `<div class="selection-item" onclick="memoryApp.toggleSelection(this, 'theme')" data-value="${theme}">${theme}</div>`
+        ).join('');
+    }
+
+    toggleSelection(element, type) {
+        const value = element.getAttribute('data-value');
+        
+        if (type === 'subject') {
+            if (this.selectedSubjects.has(value)) {
+                this.selectedSubjects.delete(value);
+                element.classList.remove('selected');
+            } else {
+                this.selectedSubjects.add(value);
+                element.classList.add('selected');
+            }
+        } else if (type === 'theme') {
+            if (this.selectedThemes.has(value)) {
+                this.selectedThemes.delete(value);
+                element.classList.remove('selected');
+            } else {
+                this.selectedThemes.add(value);
+                element.classList.add('selected');
+            }
+        } else if (type === 'confidence') {
+            document.querySelectorAll('.selection-item[data-value]').forEach(el => {
+                if (el.parentElement.querySelector('.selection-title').textContent.includes('Сложность')) {
+                    el.classList.remove('selected');
+                }
+            });
+            
+            this.selectedConfidence = value;
+            element.classList.add('selected');
+        }
+        
+        this.updateStartButton();
+    }
+
+    updateStartButton() {
+        const startBtn = document.getElementById('startReviewSelectionBtn');
+        if (!startBtn) return;
+        
+        let canStart = false;
+        
+        if (this.selectedReviewOption === 'custom') {
+            canStart = this.selectedSubjects.size > 0 || this.selectedThemes.size > 0;
+        } else {
+            canStart = this.selectedReviewOption !== null;
+        }
+        
+        startBtn.disabled = !canStart;
+        
+        if (canStart) {
+            const cardCount = this.getSelectedCards().length;
+            startBtn.textContent = `🚀 Начать повторение (${cardCount} карточек)`;
+        } else {
+            startBtn.textContent = '🚀 Начать повторение выбранных карточек';
         }
     }
 
-    // НОВЫЙ ФУНКЦИОНАЛ: AI-ОТВЕТЫ НА ВОПРОСЫ
+    getSelectedCards() {
+        let filteredCards = [...this.cards];
+        
+        switch (this.selectedReviewOption) {
+            case 'all':
+                break;
+            case 'due':
+                filteredCards = filteredCards.filter(card => card.isDueForReview());
+                break;
+            case 'hard':
+                filteredCards = filteredCards.filter(card => card.confidence === 2);
+                break;
+            case 'custom':
+                if (this.selectedSubjects.size > 0) {
+                    filteredCards = filteredCards.filter(card => 
+                        this.selectedSubjects.has(card.subject)
+                    );
+                }
+                if (this.selectedThemes.size > 0) {
+                    filteredCards = filteredCards.filter(card => 
+                        this.selectedThemes.has(card.theme)
+                    );
+                }
+                if (this.selectedConfidence !== 'all') {
+                    filteredCards = filteredCards.filter(card => 
+                        card.confidence === parseInt(this.selectedConfidence)
+                    );
+                }
+                break;
+        }
+        
+        return this.shuffleArray(filteredCards);
+    }
+
+    startSelectedReview() {
+        this.reviewCards = this.getSelectedCards();
+        
+        if (this.reviewCards.length === 0) {
+            this.showNotification('Нет карточек, соответствующих выбранным критериям', 'error');
+            return;
+        }
+        
+        this.currentCardIndex = 0;
+        this.showInterface('reviewInterface');
+        this.showCard();
+    }
+
+    showCard() {
+        if (this.reviewCards.length === 0) return;
+        
+        const card = this.reviewCards[this.currentCardIndex];
+        
+        document.getElementById('reviewProgress').textContent = 
+            `${this.currentCardIndex + 1}/${this.reviewCards.length}`;
+        document.getElementById('reviewSubjectTheme').textContent = 
+            `${card.subject || 'Без предмета'}: ${card.theme || 'Без темы'}`;
+        
+        document.getElementById('questionCard').textContent = card.question;
+        document.getElementById('answerCard').textContent = '';
+        document.getElementById('answerCard').style.display = 'none';
+        
+        document.getElementById('cardMeta').innerHTML = `
+            <strong>Сложность:</strong> ${card.getConfidenceText()} | 
+            <strong>Последнее повторение:</strong> ${card.lastReviewed ? 
+                new Date(card.lastReviewed).toLocaleDateString('ru-RU') : 'Никогда'}
+        `;
+        
+        document.getElementById('showAnswerBtn').style.display = 'block';
+        document.getElementById('hardBtn').style.display = 'none';
+        document.getElementById('goodBtn').style.display = 'none';
+        document.getElementById('easyBtn').style.display = 'none';
+        
+        this.isAnswerShown = false;
+        this.updateProgress();
+    }
+
+    showAnswer() {
+        if (this.reviewCards.length === 0) return;
+        
+        const card = this.reviewCards[this.currentCardIndex];
+        document.getElementById('answerCard').textContent = card.answer;
+        document.getElementById('answerCard').style.display = 'block';
+        
+        document.getElementById('showAnswerBtn').style.display = 'none';
+        document.getElementById('hardBtn').style.display = 'inline-block';
+        document.getElementById('goodBtn').style.display = 'inline-block';
+        document.getElementById('easyBtn').style.display = 'inline-block';
+        
+        this.isAnswerShown = true;
+        card.lastReviewed = new Date().toISOString();
+        this.saveCards();
+    }
+
+    rateCard(rating) {
+        if (this.reviewCards.length === 0) return;
+        
+        const card = this.reviewCards[this.currentCardIndex];
+        card.confidence = rating;
+        card.nextReviewDate = card.calculateNextReviewDate();
+        this.saveCards();
+        
+        this.currentCardIndex++;
+        
+        if (this.currentCardIndex < this.reviewCards.length) {
+            this.showCard();
+        } else {
+            const completedCount = this.reviewCards.length;
+            this.showNotification(`Повторение завершено! Вы повторили ${completedCount} карточек! 🎉`, 'success');
+            setTimeout(() => {
+                this.showInterface('mainInterface');
+            }, 2000);
+        }
+    }
+
+    updateProgress() {
+        const progressFill = document.getElementById('progressFill');
+        if (progressFill && this.reviewCards.length > 0) {
+            const progress = (this.currentCardIndex / this.reviewCards.length) * 100;
+            progressFill.style.width = progress + '%';
+        }
+    }
+
+    startReview() {
+        if (this.cards.length === 0) {
+            this.showNotification('Нет карточек для повторения. Сначала создайте карточки.', 'error');
+            this.showInterface('mainInterface');
+            return;
+        }
+        
+        this.reviewCards = this.shuffleArray([...this.cards]);
+        this.currentCardIndex = 0;
+        this.showInterface('reviewInterface');
+        this.showCard();
+    }
+
+    shuffleArray(array) {
+        const newArray = [...array];
+        for (let i = newArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+        }
+        return newArray;
+    }
+
+    // AI ФУНКЦИОНАЛ
     async askAI() {
         const questionInput = document.getElementById('questionInput');
         const textInput = document.getElementById('textInput');
@@ -217,37 +698,26 @@ class MemoryApp {
             return;
         }
         
-        // Показываем загрузку
         askAiBtn.innerHTML = '<div class="loading"></div> Генерируем ответ...';
         askAiBtn.disabled = true;
         
         try {
-            // Имитация AI-ответа (в реальном приложении здесь будет API вызов)
             const aiResponse = await this.generateAIResponse(question);
-            
-            // Вставляем ответ в текстовое поле
             textInput.value = aiResponse;
-            
-            // Автоматически определяем тему
             this.autoDetectThemeFromQuestion(question);
-            
             this.showNotification('AI сгенерировал ответ! Теперь можно создать карточки', 'success');
-            
         } catch (error) {
             console.error('AI error:', error);
             this.showNotification('Ошибка при генерации ответа', 'error');
         } finally {
-            // Восстанавливаем кнопку
             askAiBtn.innerHTML = '🤖 Спросить AI';
             askAiBtn.disabled = false;
         }
     }
 
     async generateAIResponse(question) {
-        // Имитация задержки сети
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // База знаний AI (в реальном приложении здесь будет вызов к API)
         const knowledgeBase = {
             'что такое фотосинтез': `Фотосинтез — это процесс преобразования энергии света в химическую энергию, происходящий в растениях, водорослях и некоторых бактериях.
 
@@ -265,7 +735,6 @@ class MemoryApp {
             'строение клетки': `Клетка — основная структурная и функциональная единица живых организмов.
 
 Основные компоненты клетки:
-
 1. Ядро - содержит генетический материал (ДНК)
 2. Цитоплазма - внутренняя среда клетки
 3. Мембрана - регулирует обмен веществ
@@ -301,14 +770,12 @@ class MemoryApp {
         
         const lowerQuestion = question.toLowerCase();
         
-        // Поиск наиболее подходящего ответа
         for (const [key, answer] of Object.entries(knowledgeBase)) {
             if (lowerQuestion.includes(key)) {
                 return answer;
             }
         }
         
-        // Стандартный ответ, если вопрос не распознан
         return `Ответ на вопрос: "${question}"
 
 Это сложный и многогранный вопрос. Вот основные аспекты:
@@ -332,23 +799,7 @@ class MemoryApp {
         }
     }
 
-    autoDetectTheme() {
-        const textInput = document.getElementById('textInput');
-        const themeInput = document.getElementById('themeInput');
-        
-        if (!textInput || !themeInput) return;
-        
-        const text = textInput.value.trim();
-        if (!text) return;
-        
-        if (!themeInput.value.trim()) {
-            const detectedTheme = this.findMainTopic(text);
-            if (detectedTheme && detectedTheme !== 'основное понятие') {
-                themeInput.value = detectedTheme;
-            }
-        }
-    }
-
+    // УЛУЧШЕННАЯ ГЕНЕРАЦИЯ КАРТОЧЕК
     generateCards() {
         const textInput = document.getElementById('textInput');
         const themeInput = document.getElementById('themeInput');
@@ -375,7 +826,7 @@ class MemoryApp {
             if (themeInput) themeInput.value = theme;
         }
         
-        const newCards = this.intelligentCardGeneration(text, theme, subject);
+        const newCards = this.improvedCardGeneration(text, theme, subject);
         
         this.cards = [...this.cards, ...newCards];
         this.saveCards();
@@ -384,50 +835,116 @@ class MemoryApp {
         this.showNotification(`Добавлено ${newCards.length} карточек по теме "${theme}"! Всего карточек: ${this.cards.length}`, 'success');
     }
 
-    intelligentCardGeneration(text, theme, subject) {
-        const newCards = [];
+    improvedCardGeneration(text, theme, subject) {
+        const facts = this.extractFactsFromText(text);
+        console.log('Извлеченные факты:', facts);
         
-        // Разбиваем текст на смысловые блоки
-        const meaningBlocks = this.extractMeaningBlocks(text);
+        const factCards = this.questionGenerator.generateCardsFromFacts(facts, theme, subject);
         
-        console.log('Найдены смысловые блоки:', meaningBlocks);
+        if (factCards.length === 0) {
+            return this.intelligentCardGeneration(text, theme, subject);
+        }
         
-        // Создаем карточки для каждого смыслового блока
-        meaningBlocks.forEach((block, index) => {
-            const question = this.generateSmartQuestion(block, theme, index, meaningBlocks.length);
-            const answer = block.content;
+        return factCards;
+    }
+
+    extractFactsFromText(text) {
+        const facts = [];
+        
+        const cleanText = text.replace(/\n\s*\n/g, '\n').trim();
+        const sentences = cleanText.split(/[.!?]+/).filter(s => s.trim().length > 10);
+        
+        sentences.forEach(sentence => {
+            const trimmed = sentence.trim();
             
-            if (answer.length > 20) { // Минимальная длина ответа
-                newCards.push(new MemoryCard(question, answer, theme, subject));
+            if (this.looksLikeFact(trimmed)) {
+                facts.push({ fact: trimmed });
             }
         });
         
-        // Если не удалось выделить смысловые блоки, создаем одну общую карточку
+        if (facts.length < 3 && sentences.length > 0) {
+            const keySentences = sentences
+                .filter(s => this.isImportantSentence(s))
+                .slice(0, 5);
+                
+            keySentences.forEach(sentence => {
+                facts.push({ fact: sentence.trim() });
+            });
+        }
+        
+        return facts;
+    }
+
+    looksLikeFact(sentence) {
+        const factPatterns = [
+            /[^—]+—[^—]/,
+            /[^:]+:[^:]/,
+            /является/i,
+            /это\s+/,
+            /означает/i,
+            /называется/i,
+            /состоит\s+в/i,
+            /заключается\s+в/i
+        ];
+        
+        return factPatterns.some(pattern => pattern.test(sentence));
+    }
+
+    isImportantSentence(sentence) {
+        const importantIndicators = [
+            /определение/i,
+            /понятие/i,
+            /сущность/i,
+            /основн/i,
+            /главн/i,
+            /ключев/i,
+            /важн/i,
+            /заключ/i
+        ];
+        
+        return importantIndicators.some(indicator => indicator.test(sentence.toLowerCase()));
+    }
+
+    intelligentCardGeneration(text, theme, subject) {
+        const newCards = [];
+        
+        const meaningBlocks = this.extractMeaningBlocks(text);
+        
+        console.log('Найдены смысловые блоки (старый метод):', meaningBlocks);
+        
+        meaningBlocks.forEach((block, index) => {
+            try {
+                const { question, answer } = this.questionGenerator.generateQuestionAnswer(block.content);
+                
+                if (answer.length > 10) {
+                    newCards.push(new MemoryCard(question, answer, theme, subject));
+                }
+            } catch (error) {
+                console.error('Error generating card:', error);
+                const oldQuestion = this.generateSmartQuestion(block, theme, index, meaningBlocks.length);
+                if (block.content.length > 20) {
+                    newCards.push(new MemoryCard(oldQuestion, block.content, theme, subject));
+                }
+            }
+        });
+        
         if (newCards.length === 0 && text.length > 50) {
-            newCards.push(new MemoryCard(
-                `Что такое ${theme}?`,
-                text,
-                theme,
-                subject
-            ));
+            const { question, answer } = this.questionGenerator.generateQuestionAnswer(text);
+            newCards.push(new MemoryCard(question, answer, theme, subject));
         }
         
         return newCards;
     }
 
+    // СТАРЫЕ МЕТОДЫ ДЛЯ ОБРАТНОЙ СОВМЕСТИМОСТИ
     extractMeaningBlocks(text) {
         const blocks = [];
-        
-        // Очищаем текст от лишних пробелов
         const cleanText = text.replace(/\n\s*\n/g, '\n').trim();
-        
-        // Разбиваем на абзацы
         const paragraphs = cleanText.split(/\n+/).filter(p => p.trim().length > 0);
         
         paragraphs.forEach(paragraph => {
             const trimmedPara = paragraph.trim();
             
-            // Если абзац короткий, проверяем, не является ли он заголовком
             if (trimmedPara.length < 100 && this.looksLikeHeading(trimmedPara)) {
                 blocks.push({
                     type: 'heading',
@@ -435,18 +952,15 @@ class MemoryApp {
                     isImportant: true
                 });
             } else {
-                // Разбиваем длинные абзацы на предложения и группируем по смыслу
                 const sentences = trimmedPara.split(/[.!?]+/).filter(s => s.trim().length > 10);
                 
                 if (sentences.length <= 2) {
-                    // Короткий абзац - один блок
                     blocks.push({
                         type: 'paragraph',
                         content: trimmedPara,
                         isImportant: this.isImportantContent(trimmedPara)
                     });
                 } else {
-                    // Длинный абзац - разбиваем на смысловые группы
                     const sentenceGroups = this.groupSentencesByMeaning(sentences);
                     sentenceGroups.forEach(group => {
                         blocks.push({
@@ -459,18 +973,17 @@ class MemoryApp {
             }
         });
         
-        // Объединяем очень короткие блоки
         return this.mergeShortBlocks(blocks);
     }
 
     looksLikeHeading(text) {
         const headingIndicators = [
-            /^[А-Я][а-я]+\s*:/, // Слово с двоеточием
-            /^[IVXLCDM]+\./, // Римские цифры
-            /^\d+\./, // Арабские цифры
-            /^[а-я]\)/, // Буква со скобкой
-            /^[•\-*]\s/, // Маркеры списка
-            /^[А-Я][^.!?]*$/, // Текст без точек в конце
+            /^[А-Я][а-я]+\s*:/,
+            /^[IVXLCDM]+\./,
+            /^\d+\./,
+            /^[а-я]\)/,
+            /^[•\-*]\s/,
+            /^[А-Я][^.!?]*$/,
             /^(определение|понятие|теория|закон|принцип|правило|свойство|признак|функция|роль|значение|виды|типы|классификация|пример|особенности|характеристики)/i
         ];
         
@@ -496,8 +1009,6 @@ class MemoryApp {
         
         sentences.forEach((sentence, index) => {
             const cleanSentence = sentence.trim();
-            
-            // Проверяем, начинается ли новое понятие
             const startsNewConcept = this.startsNewConcept(cleanSentence);
             
             if (startsNewConcept && currentGroup.length > 0) {
@@ -507,7 +1018,6 @@ class MemoryApp {
                 currentGroup.push(cleanSentence);
             }
             
-            // Если это последнее предложение, добавляем текущую группу
             if (index === sentences.length - 1 && currentGroup.length > 0) {
                 groups.push([...currentGroup]);
             }
@@ -544,17 +1054,14 @@ class MemoryApp {
         
         blocks.forEach(block => {
             if (block.type === 'heading') {
-                // Заголовок всегда начинает новый блок
                 if (currentBlock) {
                     merged.push(currentBlock);
                 }
                 currentBlock = block;
             } else if (currentBlock && currentBlock.content.length < 150) {
-                // Объединяем с текущим блоком, если он короткий
                 currentBlock.content += ' ' + block.content;
                 currentBlock.isImportant = currentBlock.isImportant || block.isImportant;
             } else {
-                // Начинаем новый блок
                 if (currentBlock) {
                     merged.push(currentBlock);
                 }
@@ -562,23 +1069,20 @@ class MemoryApp {
             }
         });
         
-        // Добавляем последний блок
         if (currentBlock) {
             merged.push(currentBlock);
         }
         
-        return merged.filter(block => block.content.length > 30); // Убираем очень короткие блоки
+        return merged.filter(block => block.content.length > 30);
     }
 
     generateSmartQuestion(block, theme, index, totalBlocks) {
         const content = block.content.toLowerCase();
         
-        // Вопросы для заголовков
         if (block.type === 'heading') {
             return `Что означает "${block.content}"?`;
         }
         
-        // Вопросы по содержанию
         if (content.includes('определение') || content.includes('означает') || content.includes('это')) {
             return 'Какое определение дается?';
         }
@@ -615,7 +1119,6 @@ class MemoryApp {
             return 'Как происходит процесс?';
         }
         
-        // Умные вопросы по контексту
         if (block.isImportant && index === 0) {
             return 'В чём состоит основная идея?';
         }
@@ -630,7 +1133,6 @@ class MemoryApp {
             return importantQuestions[index % importantQuestions.length];
         }
         
-        // Стандартные вопросы для остальных случаев
         const standardQuestions = [
             'Что описывается в этом фрагменте?',
             'О чём идёт речь?',
@@ -712,59 +1214,71 @@ class MemoryApp {
         return serviceWords.includes(word);
     }
 
-    displayGeneratedCards() {
-        const cardsList = document.getElementById('cardsList');
-        const cardsContainer = document.getElementById('cardsContainer');
+    autoDetectTheme() {
+        const textInput = document.getElementById('textInput');
+        const themeInput = document.getElementById('themeInput');
         
-        if (!cardsList || !cardsContainer) return;
+        if (!textInput || !themeInput) return;
         
-        cardsList.innerHTML = '';
+        const text = textInput.value.trim();
+        if (!text) return;
         
-        // Показываем все карточки текущей темы
-        const currentSubject = document.getElementById('subjectInput').value.trim();
-        const currentTheme = document.getElementById('themeInput').value.trim();
-        
-        const recentCards = this.cards.filter(card => 
-            card.subject === currentSubject && card.theme === currentTheme
-        );
-        
-        if (recentCards.length === 0) {
-            // Если не нашли по теме, показываем последние 20 карточек
-            const allRecentCards = this.cards.slice(-20);
-            allRecentCards.forEach((card) => {
-                const cardElement = this.createCardElement(card);
-                cardsList.appendChild(cardElement);
-            });
-        } else {
-            recentCards.forEach((card) => {
-                const cardElement = this.createCardElement(card);
-                cardsList.appendChild(cardElement);
-            });
+        if (!themeInput.value.trim()) {
+            const detectedTheme = this.findMainTopic(text);
+            if (detectedTheme && detectedTheme !== 'основное понятие') {
+                themeInput.value = detectedTheme;
+            }
         }
+    }
+
+    // ИНТЕРФЕЙС И НАВИГАЦИЯ
+    showInterface(interfaceName) {
+        document.getElementById('mainInterface').style.display = 'none';
+        document.getElementById('cardsContainer').style.display = 'none';
+        document.getElementById('reviewInterface').style.display = 'none';
+        document.getElementById('catalogInterface').style.display = 'none';
+        document.getElementById('reviewSelectInterface').style.display = 'none';
         
-        this.showInterface('cardsContainer');
+        document.getElementById(interfaceName).style.display = 'block';
+        this.updateBackButton(interfaceName);
+        this.currentInterface = interfaceName;
     }
 
-    createCardElement(card) {
-        const cardElement = document.createElement('div');
-        cardElement.className = 'card';
-        cardElement.innerHTML = `
-            ${card.subject ? `<div class="card-subject">${card.subject}</div>` : ''}
-            ${card.theme ? `<div class="card-theme">${card.theme}</div>` : ''}
-            <div class="card-question">${card.question}</div>
-            <div class="card-answer">${card.answer}</div>
-            <div class="card-actions">
-                <button class="edit-btn" data-card-id="${card.id}">
-                    ✏ Редактировать
-                </button>
-                <button class="delete-btn" data-card-id="${card.id}">
-                    🗑 Удалить
-                </button>
-            </div>
-        `;
-        return cardElement;
+    updateBackButton(interfaceName) {
+        const backBtn = document.querySelector('.back-btn');
+        if (backBtn) {
+            if (interfaceName === 'mainInterface') {
+                backBtn.style.display = 'none';
+            } else {
+                backBtn.style.display = 'block';
+                
+                if (interfaceName === 'reviewInterface') {
+                    backBtn.onclick = () => this.showReviewSelect();
+                } else {
+                    backBtn.onclick = () => this.showMainInterface();
+                }
+            }
+        }
     }
 
+    goBack() {
+        switch(this.currentInterface) {
+            case 'cardsContainer':
+            case 'catalogInterface':
+            case 'reviewInterface':
+            case 'reviewSelectInterface':
+                this.showMainInterface();
+                break;
+            default:
+                this.showMainInterface();
+        }
+    }
+
+    showMainInterface() {
+        this.showInterface('mainInterface');
+    }
+
+    // КАТАЛОГ
     showCatalog() {
         if (this.cards.length === 0) {
             this.showNotification('Нет созданных карточек. Сначала создайте карточки.', 'error');
@@ -875,121 +1389,56 @@ class MemoryApp {
         return text.replace(/[^a-zA-Z0-9а-яА-Я]/g, '-').toLowerCase();
     }
 
-    showInterface(interfaceName) {
-        document.getElementById('mainInterface').style.display = 'none';
-        document.getElementById('cardsContainer').style.display = 'none';
-        document.getElementById('reviewInterface').style.display = 'none';
-        document.getElementById('catalogInterface').style.display = 'none';
+    // ОТОБРАЖЕНИЕ СГЕНЕРИРОВАННЫХ КАРТОЧЕК
+    displayGeneratedCards() {
+        const cardsList = document.getElementById('cardsList');
+        const cardsContainer = document.getElementById('cardsContainer');
         
-        document.getElementById(interfaceName).style.display = 'block';
-        this.updateBackButton(interfaceName);
-        this.currentInterface = interfaceName;
-    }
-
-    updateBackButton(interfaceName) {
-        const backBtn = document.querySelector('.back-btn');
-        if (backBtn) {
-            if (interfaceName === 'mainInterface') {
-                backBtn.style.display = 'none';
-            } else {
-                backBtn.style.display = 'block';
-            }
-        }
-    }
-
-    showMainInterface() {
-        this.showInterface('mainInterface');
-    }
-
-    startReview() {
-        if (this.cards.length === 0) {
-            this.showNotification('Нет карточек для повторения. Сначала создайте карточки.', 'error');
-            this.showInterface('mainInterface');
-            return;
-        }
+        if (!cardsList || !cardsContainer) return;
         
-        // ИСПРАВЛЕНИЕ: Берем ВСЕ карточки для повторения, а не только текущей темы
-        this.reviewCards = [...this.cards];
+        cardsList.innerHTML = '';
         
-        if (this.reviewCards.length === 0) {
-            this.showNotification('Нет карточек для повторения', 'error');
-            return;
-        }
+        const currentSubject = document.getElementById('subjectInput').value.trim();
+        const currentTheme = document.getElementById('themeInput').value.trim();
         
-        // Перемешиваем карточки для разнообразия
-        this.reviewCards = this.shuffleArray(this.reviewCards);
-        this.currentCardIndex = 0;
-        this.showInterface('reviewInterface');
-        this.showCard();
-    }
-
-    shuffleArray(array) {
-        const newArray = [...array];
-        for (let i = newArray.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-        }
-        return newArray;
-    }
-
-    showCard() {
-        if (this.reviewCards.length === 0) return;
+        const recentCards = this.cards.filter(card => 
+            card.subject === currentSubject && card.theme === currentTheme
+        );
         
-        const card = this.reviewCards[this.currentCardIndex];
-        document.getElementById('questionCard').textContent = card.question;
-        document.getElementById('answerCard').textContent = '';
-        document.getElementById('answerCard').style.display = 'none';
-        
-        document.getElementById('showAnswerBtn').style.display = 'block';
-        document.getElementById('hardBtn').style.display = 'none';
-        document.getElementById('goodBtn').style.display = 'none';
-        document.getElementById('easyBtn').style.display = 'none';
-        
-        this.isAnswerShown = false;
-        this.updateProgress();
-    }
-
-    showAnswer() {
-        if (this.reviewCards.length === 0) return;
-        
-        const card = this.reviewCards[this.currentCardIndex];
-        document.getElementById('answerCard').textContent = card.answer;
-        document.getElementById('answerCard').style.display = 'block';
-        
-        document.getElementById('showAnswerBtn').style.display = 'none';
-        document.getElementById('hardBtn').style.display = 'inline-block';
-        document.getElementById('goodBtn').style.display = 'inline-block';
-        document.getElementById('easyBtn').style.display = 'inline-block';
-        
-        this.isAnswerShown = true;
-        card.lastReviewed = new Date().toISOString();
-        this.saveCards();
-    }
-
-    rateCard(rating) {
-        if (this.reviewCards.length === 0) return;
-        
-        this.reviewCards[this.currentCardIndex].confidence = rating;
-        this.saveCards();
-        
-        this.currentCardIndex++;
-        
-        if (this.currentCardIndex < this.reviewCards.length) {
-            this.showCard();
+        if (recentCards.length === 0) {
+            const allRecentCards = this.cards.slice(-20);
+            allRecentCards.forEach((card) => {
+                const cardElement = this.createCardElement(card);
+                cardsList.appendChild(cardElement);
+            });
         } else {
-            this.showNotification('Повторение завершено! Отличная работа! 🎉', 'success');
-            setTimeout(() => {
-                this.showInterface('mainInterface');
-            }, 2000);
+            recentCards.forEach((card) => {
+                const cardElement = this.createCardElement(card);
+                cardsList.appendChild(cardElement);
+            });
         }
+        
+        this.showInterface('cardsContainer');
     }
 
-    updateProgress() {
-        const progressFill = document.getElementById('progressFill');
-        if (progressFill && this.reviewCards.length > 0) {
-            const progress = (this.currentCardIndex / this.reviewCards.length) * 100;
-            progressFill.style.width = progress + '%';
-        }
+    createCardElement(card) {
+        const cardElement = document.createElement('div');
+        cardElement.className = 'card';
+        cardElement.innerHTML = `
+            ${card.subject ? `<div class="card-subject">${card.subject}</div>` : ''}
+            ${card.theme ? `<div class="card-theme">${card.theme}</div>` : ''}
+            <div class="card-question">${card.question}</div>
+            <div class="card-answer">${card.answer}</div>
+            <div class="card-actions">
+                <button class="edit-btn" data-card-id="${card.id}">
+                    ✏ Редактировать
+                </button>
+                <button class="delete-btn" data-card-id="${card.id}">
+                    🗑 Удалить
+                </button>
+            </div>
+        `;
+        return cardElement;
     }
 
     // СТАТИСТИКА
@@ -1020,7 +1469,6 @@ ${Object.entries(stats.bySubject).map(([subject, count]) => `• ${subject}: ${c
             card.lastReviewed && new Date(card.lastReviewed).toDateString() === today
         ).length;
         
-        // Статистика по предметам
         const bySubject = this.cards.reduce((acc, card) => {
             const subject = card.subject || 'Без предмета';
             acc[subject] = (acc[subject] || 0) + 1;
@@ -1041,24 +1489,21 @@ ${Object.entries(stats.bySubject).map(([subject, count]) => `• ${subject}: ${c
 
     // УВЕДОМЛЕНИЯ
     showNotification(message, type = 'info') {
-        // Создаем уведомление
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.textContent = message;
         
         document.body.appendChild(notification);
         
-        // Анимация появления
         setTimeout(() => notification.style.transform = 'translateX(0)', 100);
         
-        // Автоматическое скрытие
         setTimeout(() => {
             notification.style.transform = 'translateX(400px)';
             setTimeout(() => notification.remove(), 300);
         }, 4000);
     }
 
-    // МЕТОДЫ РЕДАКТИРОВАНИЯ И УДАЛЕНИЯ КАРТОЧЕК
+    // РЕДАКТИРОВАНИЕ И УДАЛЕНИЕ
     showEditModal(cardId) {
         const card = this.cards.find(c => c.id == cardId);
         if (!card) {
@@ -1150,7 +1595,6 @@ ${Object.entries(stats.bySubject).map(([subject, count]) => `• ${subject}: ${c
         this.showNotification('Карточка удалена! ✅', 'success');
     }
 
-    // МЕТОДЫ УДАЛЕНИЯ ТЕМ И ПРЕДМЕТОВ
     showDeleteThemeModal(themeName, subjectName) {
         this.deletingThemeName = themeName;
         this.deletingSubjectName = subjectName;
@@ -1218,6 +1662,7 @@ ${Object.entries(stats.bySubject).map(([subject, count]) => `• ${subject}: ${c
         this.showNotification(`Предмет "${this.deletingSubjectName}" и ${deletedCount} карточек удалены! ✅`, 'success');
     }
 
+    // ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ
     shareApp() {
         const shareText = 'MemBrain - бесплатное приложение для создания карточек и обучения с интервальными повторениями!';
         
@@ -1274,6 +1719,28 @@ ${Object.entries(stats.bySubject).map(([subject, count]) => `• ${subject}: ${c
     }
 }
 
+// ТЕСТИРОВАНИЕ ГЕНЕРАТОРА ВОПРОСОВ
+function testQuestionGenerator() {
+    const generator = new QuestionGenerator();
+    
+    const testFacts = [
+        { fact: "Столица Франции — Париж" },
+        { fact: "Великая Отечественная война была в 1941-1945 годах" },
+        { fact: "Александр Пушкин — великий русский поэт" },
+        { fact: "Фотосинтез — это процесс преобразования света в химическую энергию" },
+        { fact: "Вода кипит при 100 градусах Цельсия" }
+    ];
+    
+    console.log('=== ТЕСТ ГЕНЕРАТОРА ВОПРОСОВ ===');
+    testFacts.forEach(factObj => {
+        const result = generator.generateQuestionAnswer(factObj.fact);
+        console.log('Факт:', factObj.fact);
+        console.log('Вопрос:', result.question);
+        console.log('Ответ:', result.answer);
+        console.log('---');
+    });
+}
+
 // Глобальная переменная для доступа к приложению
 let memoryApp;
 
@@ -1282,4 +1749,7 @@ document.addEventListener('DOMContentLoaded', () => {
     memoryApp = new MemoryApp();
     memoryApp.init();
     console.log('MemBrain app initialized');
+    
+    // Тестируем генератор вопросов
+    testQuestionGenerator();
 });
