@@ -1,130 +1,130 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#3b82f6">
-  <title>JoBrain — тренажёр памяти</title>
-
-  <!-- Manifest для PWA -->
-  <link rel="manifest" href="manifest.json">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JoBrain</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" type="image/png" />
   <style>
-    :root {
-      --blue: #3b82f6;
-      --light: #f5f7fa;
-      --radius: 16px;
-      --shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-
     body {
-      font-family: "Segoe UI", sans-serif;
-      background: var(--light);
+      font-family: "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(180deg, #e8f0ff, #ffffff);
+      color: #222;
       margin: 0;
-      padding: 0;
+      padding: 1rem;
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
     }
 
-    header {
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: white;
-      padding: 16px 0;
-      width: 100%;
+    h1 {
+      margin-bottom: 0.5rem;
+      color: #2b4cff;
+      font-weight: 700;
+      font-size: 1.8rem;
       text-align: center;
-      font-size: 1.5em;
-      font-weight: 600;
-      box-shadow: var(--shadow);
     }
 
-    main {
-      width: 100%;
+    textarea, input[type="text"] {
+      width: 90%;
       max-width: 600px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    input, textarea {
-      width: 100%;
-      padding: 12px;
+      padding: 0.8rem;
+      margin: 0.5rem 0;
+      font-size: 1rem;
       border: 1px solid #ccc;
-      border-radius: var(--radius);
-      font-size: 1em;
-      resize: none;
+      border-radius: 10px;
+      resize: vertical;
     }
 
     button {
-      background: var(--blue);
-      color: white;
+      width: 90%;
+      max-width: 600px;
+      padding: 0.9rem;
+      margin: 0.4rem 0;
+      font-size: 1.1rem;
+      background-color: #2b4cff;
+      color: #fff;
       border: none;
-      border-radius: var(--radius);
-      padding: 12px;
-      font-size: 1em;
+      border-radius: 12px;
       cursor: pointer;
-      transition: background 0.3s ease;
+      transition: background-color 0.3s;
     }
 
     button:hover {
-      background: #2563eb;
+      background-color: #1e3ae5;
     }
 
     label {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 0.95em;
-      color: #333;
-      margin-top: 6px;
+      justify-content: center;
+      gap: 0.5rem;
+      font-size: 1rem;
+      margin-top: 0.6rem;
     }
 
-    #cardContainer {
-      margin-top: 20px;
+    #cardsContainer {
+      width: 90%;
+      max-width: 600px;
+      margin-top: 1rem;
     }
 
-    footer {
-      margin-top: auto;
-      padding: 16px;
-      font-size: 0.8em;
-      color: #666;
-    }
-
-    /* Легкая анимация для карточек */
     .card {
-      animation: fadeIn 0.4s ease;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      margin-bottom: 0.8rem;
+      padding: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
+    .card:hover {
+      transform: scale(1.02);
+    }
+
+    .answer {
+      display: none;
+      margin-top: 0.5rem;
+      color: #444;
+    }
+
+    @media (max-width: 480px) {
+      button, textarea, input[type="text"] {
+        font-size: 1rem;
+      }
+      label {
+        flex-direction: column;
+        font-size: 0.95rem;
+      }
     }
   </style>
 </head>
 <body>
-  <header>🧠 JoBrain — тренажёр памяти</header>
+  <h1>JoBrain</h1>
 
-  <main>
-    <input id="topicInput" type="text" placeholder="Введите тему урока">
-    <textarea id="textInput" rows="6" placeholder="Вставьте текст урока сюда..."></textarea>
+  <!-- Поле для задания ИИ -->
+  <input id="aiPrompt" type="text" placeholder="Вопрос / задание для AI (например: 'Составь карточки по теме фотосинтез')" />
 
-    <label>
-      <input type="checkbox" id="englishToggle">
-      Ответы на английском
-    </label>
+  <!-- Основной текст урока -->
+  <textarea id="lessonText" rows="6" placeholder="Вставьте текст темы для создания карточек..."></textarea>
 
-    <button id="generateBtn">Сгенерировать карточки</button>
-    <button id="repeatBtn">Повторить тему</button>
-    <button id="saveBtn">Сохранить</button>
+  <!-- Переключатель языка ответов -->
+  <label>
+    <input type="checkbox" id="englishToggle" />
+    Ответы на английском
+  </label>
 
-    <div id="cardContainer"></div>
-  </main>
+  <!-- Кнопки -->
+  <button id="generateCards">Сгенерировать карточки</button>
+  <button id="aiGenerate">AI-генерация карточек</button>
+  <button id="repeatCards">Повторение</button>
+  <button id="saveCards">Сохранить</button>
+  <button id="openCatalog">Каталог тем</button>
 
-  <footer>
-    © 2025 JoBrain | Учись умнее, запоминай быстрее.
-  </footer>
+  <div id="cardsContainer"></div>
 
   <script src="manual.js"></script>
 </body>
