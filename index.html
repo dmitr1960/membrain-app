@@ -1,131 +1,135 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JoBrain</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>JoBrain — тренажёр памяти</title>
+  <meta name="theme-color" content="#2563eb" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="icons/icon-192.png" type="image/png" />
   <style>
-    body {
-      font-family: "Segoe UI", Roboto, sans-serif;
-      background: linear-gradient(180deg, #e8f0ff, #ffffff);
-      color: #222;
-      margin: 0;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
+    /* --- Базовый стиль (адаптивный, мобильный) --- */
+    :root {
+      --bg1: #e8f0ff;
+      --accent: #2563eb;
+      --card: #ffffff;
+      --muted: #6b7280;
+      --radius: 14px;
+      --shadow: 0 6px 18px rgba(16,24,40,0.08);
+      --maxw: 820px;
+    }
+    html,body { height:100%; }
+    body{
+      margin:0; font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg,var(--bg1),#ffffff);
+      display:flex; flex-direction:column; align-items:center; color:#111;
+      padding:18px 12px 36px;
+    }
+    header {
+      width:100%; max-width:var(--maxw);
+      display:flex; align-items:center; gap:12px;
+      margin-bottom:12px;
+    }
+    .logo {
+      width:56px; height:56px; border-radius:12px;
+      display:flex; align-items:center; justify-content:center;
+      background: linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; font-weight:700;
+      font-size:26px; box-shadow:var(--shadow);
+    }
+    h1{ margin:0; font-size:1.25rem; color:var(--accent); }
+    main{ width:100%; max-width:var(--maxw); display:flex; flex-direction:column; gap:12px; }
+
+    .panel{
+      background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+      padding:12px; display:flex; flex-direction:column; gap:8px;
     }
 
-    h1 {
-      margin-bottom: 0.5rem;
-      color: #2b4cff;
-      font-weight: 700;
-      font-size: 1.8rem;
-      text-align: center;
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    label.small { font-size:0.9rem; color:var(--muted); }
+    input[type="text"], textarea, select {
+      width:100%; padding:10px 12px; border-radius:10px; border:1px solid #e6eefc;
+      font-size:1rem; background:#fbfdff;
     }
+    textarea { min-height:120px; resize:vertical; }
 
-    textarea, input[type="text"] {
-      width: 90%;
-      max-width: 600px;
-      padding: 0.8rem;
-      margin: 0.5rem 0;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      resize: vertical;
+    .controls { display:flex; gap:8px; flex-wrap:wrap; }
+    .btn {
+      padding:10px 14px; border-radius:10px; border:none; cursor:pointer;
+      font-weight:600; font-size:1rem;
     }
+    .btn.primary { background:var(--accent); color:white; box-shadow:0 6px 14px rgba(37,99,235,0.18); }
+    .btn.ghost { background:transparent; color:var(--accent); border:1px solid rgba(37,99,235,0.12); }
+    .btn.warn { background:#f97316; color:white; }
+    .btn.block { flex:1; }
 
-    button {
-      width: 90%;
-      max-width: 600px;
-      padding: 0.9rem;
-      margin: 0.4rem 0;
-      font-size: 1.1rem;
-      background-color: #2b4cff;
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
+    .lang-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 
-    button:hover {
-      background-color: #1e3ae5;
-    }
-
-    label {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      font-size: 1rem;
-      margin-top: 0.6rem;
-    }
-
-    #cardsContainer {
-      width: 90%;
-      max-width: 600px;
-      margin-top: 1rem;
-    }
-
+    #cardsContainer { display:flex; flex-direction:column; gap:10px; margin-top:8px; }
     .card {
-      background-color: #fff;
-      border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      margin-bottom: 0.8rem;
-      padding: 1rem;
-      cursor: pointer;
-      transition: transform 0.2s;
+      background:#fff; border-radius:12px; padding:12px; box-shadow:0 4px 12px rgba(2,6,23,0.06);
     }
+    .card .meta { display:flex; justify-content:space-between; gap:8px; font-size:0.85rem; color:var(--muted); }
+    .card .q { font-weight:700; color:#0f172a; margin-top:8px; cursor:pointer; }
+    .card .a { margin-top:8px; color:#111827; display:none; white-space:pre-wrap; }
+    .card .card-actions { display:flex; gap:8px; margin-top:10px; }
 
-    .card:hover {
-      transform: scale(1.02);
-    }
+    /* Modal */
+    .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.45); z-index:1000; padding:16px; }
+    .modal .box { width:100%; max-width:720px; background:white; border-radius:12px; padding:14px; max-height:90vh; overflow:auto; }
 
-    .answer {
-      display: none;
-      margin-top: 0.5rem;
-      color: #444;
-    }
-
-    @media (max-width: 480px) {
-      button, textarea, input[type="text"] {
-        font-size: 1rem;
-      }
-      label {
-        flex-direction: column;
-        font-size: 0.95rem;
-      }
+    /* Small screens */
+    @media (max-width:520px){
+      .row { flex-direction:column; align-items:stretch; }
+      .controls { flex-direction:column; }
+      header { gap:10px; }
     }
   </style>
 </head>
 <body>
-  <h1>JoBrain</h1>
+  <header>
+    <div class="logo">J</div>
+    <div>
+      <h1>JoBrain — тренажёр памяти</h1>
+      <div style="font-size:0.85rem; color:var(--muted)">Создавай карточки, сохраняй темы, повторяй с интервалами</div>
+    </div>
+  </header>
 
-  <!-- Поле для задания ИИ -->
-  <input id="aiPrompt" type="text" placeholder="Вопрос / задание для AI (например: 'Составь карточки по теме фотосинтез')" />
+  <main>
+    <!-- INPUT PANEL -->
+    <div class="panel" id="inputPanel">
+      <div class="row">
+        <input id="subjectInput" type="text" placeholder="Введите предмет (например: Биология)" />
+        <input id="themeInput" type="text" placeholder="Название раздела / темы (например: Фотосинтез)" />
+      </div>
 
-  <!-- Основной текст урока -->
-  <textarea id="lessonText" rows="6" placeholder="Вставьте текст темы для создания карточек..."></textarea>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input id="aiPrompt" type="text" placeholder="Вопрос / задание для AI (например: 'Сделай карточки по этой теме для 9 класса')" style="flex:1;" />
+        <button class="btn ghost" id="pasteBtn" title="Вставить (paste)">Вставить</button>
+      </div>
 
-  <!-- Переключатель языка ответов -->
-  <label>
-    <input type="checkbox" id="englishToggle" />
-    Ответы на английском
-  </label>
+      <textarea id="textInput" placeholder="Вставьте текст урока или вопрос — здесь будет ответ AI при использовании AI-генерации"></textarea>
 
-  <!-- Кнопки -->
-  <button id="generateCards">Сгенерировать карточки</button>
-  <button id="aiGenerate">AI-генерация карточек</button>
-  <button id="repeatCards">Повторение</button>
-  <button id="saveCards">Сохранить</button>
-  <button id="openCatalog">Каталог тем</button>
+      <div class="lang-row">
+        <label class="small">Язык ответа (авто):</label>
+        <label><input type="radio" name="lang" value="auto" checked /> Авто</label>
+        <label><input type="radio" name="lang" value="ru" /> Русский</label>
+        <label><input type="radio" name="lang" value="en" /> Английский</label>
+        <label><input type="radio" name="lang" value="kz" /> Казахский</label>
+      </div>
 
-  <div id="cardsContainer"></div>
+      <div style="display:flex; gap:8px; margin-top:6px; align-items:center; flex-wrap:wrap;">
+        <button class="btn primary" id="generateBtn">🧠 Сгенерировать карточки</button>
+        <button class="btn ghost" id="aiGenerateBtn">🤖 AI-генерация (локально)</button>
+        <button class="btn ghost" id="catalogBtn">📚 Каталог тем</button>
+        <button class="btn ghost" id="reviewBtn">🔄 Повторение</button>
+      </div>
+    </div>
 
-  <script src="manual.js"></script>
-</body>
-</html>
+    <!-- Cards -->
+    <div id="cardsContainer"></div>
+  </main>
+
+  <!-- CATALOG MODAL -->
+  <div class="modal" id="catalogModal">
+    <div class="box">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3>
