@@ -132,4 +132,39 @@
   <div class="modal" id="catalogModal">
     <div class="box">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <h3>
+        <h3>📚 Каталог тем</h3>
+        <button class="btn ghost" id="closeCatalog">Закрыть</button>
+      </div>
+      <div id="catalogList" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <!-- EDIT MODAL -->
+  <div class="modal" id="editModal">
+    <div class="box">
+      <h3>Редактировать карточку</h3>
+      <input id="editSubject" type="text" />
+      <input id="editTheme" type="text" />
+      <input id="editQuestion" type="text" />
+      <textarea id="editAnswer" rows="5"></textarea>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn primary" id="saveEditBtn">Сохранить</button>
+        <button class="btn ghost" id="cancelEditBtn">Отмена</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REVIEW MODAL -->
+  <div class="modal" id="reviewModal">
+    <div class="box">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3>🔄 Повторение</h3>
+        <button class="btn ghost" id="closeReview">Закрыть</button>
+      </div>
+      <div id="reviewList" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <script src="manual.js"></script>
+</body>
+</html>
