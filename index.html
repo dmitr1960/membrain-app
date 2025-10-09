@@ -1,1 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JoBrain — тренажёр памяти</title>
+  <meta name="theme-color" content="#2563eb" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" type="image/png" />
+  <style>
+    :root {
+      --bg1: linear-gradient(180deg, #2563eb 0%, #60a5fa 100%);
+      --card: #ffffff;
+      --radius: 16px;
+      --shadow: 0 6px 16px rgba(0,0,0,0.1);
+      --accent: #2563eb;
+      --muted: #6b7280;
+      --maxw: 820px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg1);
+      color: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    main {
+      background: var(--card);
+      width: 95%;
+      max-width: var(--maxw);
+      padding: 20px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    h1 {
+      color: var(--accent);
+      margin-bottom: 0.5em;
+      font-size: 1.6em;
+    }
+
+    textarea, input, select, button {
+      width: 100%;
+      margin: 6px 0;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      font-size: 1em;
+    }
+
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:hover {
+      background: #1e4fd8;
+    }
+
+    #cards {
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .card {
+      background: #f9fafb;
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    footer {
+      margin-top: 16px;
+      font-size: 0.85em;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>JoBrain — тренажёр памяти</h1>
+    <p>Создавай карточки и повторяй темы 📚</p>
+
+    <input type="text" id="subject" placeholder="Введите предмет (например: Биология)">
+    <input type="text" id="topic" placeholder="Введите тему (например: Фотосинтез)">
+    <textarea id="text" rows="4" placeholder="Вставьте текст урока или материал"></textarea>
+    <button onclick="generateCards()">🧠 Сгенерировать карточки</button>
+
+    <div id="cards"></div>
+
+    <footer>© 2025 JoBrain</footer>
+  </main>
+
+  <script src="manual.js"></script>
+</body>
+</html>
 
